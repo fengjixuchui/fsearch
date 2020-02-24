@@ -364,7 +364,7 @@ static uint32_t
 search_normal_icase_u8 (const char *haystack, const char *needle)
 {
     // TODO: make this faster
-    return utfcasestr (haystack, needle) ? 1 : 0;
+    return utf8casestr (haystack, needle) ? 1 : 0;
 }
 
 static uint32_t
@@ -404,7 +404,7 @@ search_query_new (const char *query, bool match_case)
     new->has_uppercase = fs_str_has_upper (query);
     new->has_separator = strchr (query, '/') ? 1 : 0;
     // TODO: this might not work at all times?
-    if (u8_strlen (query) != new->query_len) {
+    if (utf8len (query) != new->query_len) {
         new->is_utf8 = 1;
     }
     else {
@@ -448,7 +448,7 @@ build_queries (DatabaseSearch *search, FsearchQuery *q)
     // check if regex characters are present
     const bool is_reg = is_regex (q->query);
     if (is_reg && search->enable_regex) {
-        search_query_t **queries = calloc (2, sizeof (search_thread_context_t *));
+        search_query_t **queries = calloc (2, sizeof (search_query_t *));
         queries[0] = search_query_new (tmp_query_copy, search->match_case);
         queries[1] = NULL;
         g_free (tmp_query_copy);
@@ -461,7 +461,7 @@ build_queries (DatabaseSearch *search, FsearchQuery *q)
     assert (tmp_queries != NULL);
 
     uint32_t tmp_queries_len = g_strv_length (tmp_queries);
-    search_query_t **queries = calloc (tmp_queries_len + 1, sizeof (search_thread_context_t *));
+    search_query_t **queries = calloc (tmp_queries_len + 1, sizeof (search_query_t *));
     for (uint32_t i = 0; i < tmp_queries_len; i++) {
         queries[i] = search_query_new (tmp_queries[i], search->match_case);
     }
