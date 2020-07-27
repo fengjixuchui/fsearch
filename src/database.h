@@ -28,47 +28,22 @@ typedef struct _Database Database;
 
 typedef struct _DatabaseLocation DatabaseLocation;
 
-void
-db_location_free (DatabaseLocation *location);
+bool
+db_load_from_file (Database *db,
+                   const char *path,
+                   void (*callback)(const char *));
 
 bool
-db_location_load (Database *db, const char *location_name);
-
-bool
-db_location_add (Database *db,
-                 const char *location_name,
-                 void (*callback)(const char *));
-
-bool
-db_location_remove (Database *db, const char *path);
-
-bool
-db_location_write_to_file (DatabaseLocation *location, const char *fname);
-
-BTreeNode *
-db_location_get_entries (DatabaseLocation *location);
+db_scan (Database *db, void (*callback)(const char *));
 
 void
 db_free (Database *db);
 
 Database *
-db_new ();
-
-gboolean
-db_list_append_node (BTreeNode *node,
-                     gpointer data);
-
-void
-db_update_sort_index (Database *db);
+db_new (GList *includes, GList *excludes, char **exclude_files, bool exclude_hidden);
 
 bool
 db_save_locations (Database *db);
-
-void
-db_update_entries_list (Database *db);
-
-void
-db_build_initial_entries_list (Database *db);
 
 time_t
 db_get_timestamp (Database *db);
@@ -91,5 +66,3 @@ db_get_entries (Database *db);
 void
 db_sort (Database *db);
 
-bool
-db_clear (Database *db);

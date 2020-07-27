@@ -217,27 +217,27 @@ fsearch_application_window_finalize (GObject *object)
     G_OBJECT_CLASS (fsearch_application_window_parent_class)->finalize (object);
 }
 
-static void
-reset_sort_order (FsearchApplicationWindow *win)
-{
-    g_assert (FSEARCH_WINDOW_IS_WINDOW (win));
-
-    GList *list = gtk_tree_view_get_columns (GTK_TREE_VIEW (win->listview));
-    GList *l;
-    for (l = list; l != NULL; l = l->next) {
-        GtkTreeViewColumn *col = GTK_TREE_VIEW_COLUMN (l->data);
-        if (l == list) {
-            gtk_tree_view_column_set_sort_order (col, GTK_SORT_ASCENDING);
-            gtk_tree_view_column_set_sort_indicator (col, TRUE);
-            gtk_tree_view_column_set_sort_column_id (col, SORT_ID_NAME);
-        }
-        else {
-            gtk_tree_view_column_set_sort_order (col, GTK_SORT_ASCENDING);
-            gtk_tree_view_column_set_sort_indicator (col, FALSE);
-        }
-    }
-    g_list_free (list);
-}
+//static void
+//reset_sort_order (FsearchApplicationWindow *win)
+//{
+//    g_assert (FSEARCH_WINDOW_IS_WINDOW (win));
+//
+//    GList *list = gtk_tree_view_get_columns (GTK_TREE_VIEW (win->listview));
+//    GList *l;
+//    for (l = list; l != NULL; l = l->next) {
+//        GtkTreeViewColumn *col = GTK_TREE_VIEW_COLUMN (l->data);
+//        if (l == list) {
+//            gtk_tree_view_column_set_sort_order (col, GTK_SORT_ASCENDING);
+//            gtk_tree_view_column_set_sort_indicator (col, TRUE);
+//            gtk_tree_view_column_set_sort_column_id (col, SORT_ID_NAME);
+//        }
+//        else {
+//            gtk_tree_view_column_set_sort_order (col, GTK_SORT_ASCENDING);
+//            gtk_tree_view_column_set_sort_indicator (col, FALSE);
+//        }
+//    }
+//    g_list_free (list);
+//}
 
 typedef enum {
     NO_SEARCH_RESULTS_OVERLAY,
@@ -493,18 +493,18 @@ on_listview_button_press_event (GtkWidget *widget, GdkEventButton *event, gpoint
     }
     else if (event->type == GDK_2BUTTON_PRESS) {
         if (event->window == gtk_tree_view_get_bin_window (GTK_TREE_VIEW (widget))) {
-            GtkTreeViewColumn *column = NULL;
-            GtkTreePath *path = NULL;
-            gtk_tree_view_get_path_at_pos (GTK_TREE_VIEW (widget),
-                                           event->x,
-                                           event->y,
-                                           &path,
-                                           &column,
-                                           NULL,
-                                           NULL);
-            if (path) {
-                gtk_tree_path_free(path);
-            }
+            //GtkTreeViewColumn *column = NULL;
+            //GtkTreePath *path = NULL;
+            //gtk_tree_view_get_path_at_pos (GTK_TREE_VIEW (widget),
+            //                               event->x,
+            //                               event->y,
+            //                               &path,
+            //                               &column,
+            //                               NULL,
+            //                               NULL);
+            //if (path) {
+            //    gtk_tree_path_free(path);
+            //}
             return TRUE;
         }
     }
@@ -521,27 +521,37 @@ on_listview_row_activated (GtkTreeView       *tree_view,
     FsearchApplicationWindow *self = user_data;
     GtkTreeModel *model = gtk_tree_view_get_model(tree_view);
     GtkTreeIter   iter;
-    if (gtk_tree_model_get_iter(model, &iter, path)) {
-        DatabaseSearchEntry *entry = (DatabaseSearchEntry *)iter.user_data;
-        if (entry) {
-            BTreeNode * node = db_search_entry_get_node (entry);
-            if (launch_node (node)) {
-                // open succeeded
-                fsearch_window_action_after_file_open(true);
-            } else {
-                // open failed
-                FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
-                if ((config->action_after_file_open_keyboard || config->action_after_file_open_mouse) 
-                && config->show_dialog_failed_opening) {
-                    gint response = ui_utils_run_gtk_dialog (GTK_WIDGET (self),
-                                                             GTK_MESSAGE_WARNING,
-                                                             GTK_BUTTONS_YES_NO,
-                                                             _("Failed to open file"),
-                                                             _("Do you want to keep the window open?"));
-                    if (response != GTK_RESPONSE_YES) {
-                        fsearch_window_action_after_file_open(false);
-                    }
-                }
+    if (!gtk_tree_model_get_iter(model, &iter, path)) {
+        return;
+    }
+    DatabaseSearchEntry *entry = (DatabaseSearchEntry *)iter.user_data;
+    if (!entry) {
+        return;
+    }
+
+    FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
+    int launch_folder = false;
+    if (config->double_click_path && gtk_tree_view_column_get_sort_column_id (column) + 1 == LIST_MODEL_COL_PATH) {
+        launch_folder = true;
+    }
+
+    BTreeNode * node = db_search_entry_get_node (entry);
+
+
+    if (!launch_folder ? launch_node (node) : launch_node_path (node, config->folder_open_cmd)) {
+        // open succeeded
+        fsearch_window_action_after_file_open(true);
+    } else {
+        // open failed
+        if ((config->action_after_file_open_keyboard || config->action_after_file_open_mouse) 
+            && config->show_dialog_failed_opening) {
+            gint response = ui_utils_run_gtk_dialog (GTK_WIDGET (self),
+                                                     GTK_MESSAGE_WARNING,
+                                                     GTK_BUTTONS_YES_NO,
+                                                     _("Failed to open file"),
+                                                     _("Do you want to keep the window open?"));
+            if (response != GTK_RESPONSE_YES) {
+                fsearch_window_action_after_file_open(false);
             }
         }
     }
@@ -639,6 +649,24 @@ on_search_entry_changed (GtkEntry *entry, gpointer user_data)
     }
 }
 
+void
+fsearch_application_window_update_listview_config (FsearchApplicationWindow *app)
+{
+    g_assert (FSEARCH_WINDOW_IS_WINDOW (app));
+
+    FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
+
+    GtkTreeView *list = GTK_TREE_VIEW (app->listview);
+
+    listview_remove_column (list, LIST_MODEL_COL_NAME);
+    listview_add_column (list,
+                         LIST_MODEL_COL_NAME,
+                         config->name_column_width,
+                         config->name_column_pos);
+
+    gtk_tree_view_set_activate_on_single_click (list, config->single_click_open);
+}
+
 static void
 create_view_and_model (FsearchApplicationWindow *app)
 {
@@ -683,6 +711,8 @@ create_view_and_model (FsearchApplicationWindow *app)
         }
     }
 
+    gtk_tree_view_set_activate_on_single_click (list, config->single_click_open);
+
     gtk_tree_view_set_model (list,
                              GTK_TREE_MODEL(app->list_model));
     g_object_unref(app->list_model); /* destroy store automatically with view */
@@ -696,12 +726,11 @@ icon_theme_changed_cb (GtkIconTheme *icon_theme,
 }
 
 static void
-updated_database_cb (gpointer data, gpointer user_data)
+database_update_finished_cb (gpointer data, gpointer user_data)
 {
     FsearchApplicationWindow *win = (FsearchApplicationWindow *) user_data;
     g_assert (FSEARCH_WINDOW_IS_WINDOW (win));
 
-    hide_overlays (win);
     update_statusbar (win, "");
 
     fsearch_application_window_update_search (win);
@@ -723,12 +752,10 @@ updated_database_cb (gpointer data, gpointer user_data)
 }
 
 static void
-update_database_cb (gpointer data, gpointer user_data)
+database_update_started_cb (gpointer data, gpointer user_data)
 {
     FsearchApplicationWindow *win = (FsearchApplicationWindow *) user_data;
     g_assert (FSEARCH_WINDOW_IS_WINDOW (win));
-
-    show_overlay (win, DATABASE_UPDATING_OVERLAY);
 
     gtk_stack_set_visible_child (GTK_STACK (win->database_stack), win->database_box1);
     gtk_spinner_start (GTK_SPINNER (win->database_spinner));
@@ -755,12 +782,12 @@ fsearch_application_window_init (FsearchApplicationWindow *self)
 
     FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
     g_signal_connect (app,
-                      "database-update",
-                      G_CALLBACK (update_database_cb),
+                      "database-update-started",
+                      G_CALLBACK (database_update_started_cb),
                       self);
     g_signal_connect (app,
-                      "database-updated",
-                      G_CALLBACK (updated_database_cb),
+                      "database-update-finished",
+                      G_CALLBACK (database_update_finished_cb),
                       self);
 
     g_signal_connect (gtk_icon_theme_get_default (),

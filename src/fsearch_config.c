@@ -140,10 +140,18 @@ config_load (FsearchConfig *config)
     if (g_key_file_load_from_file (key_file, config_path, G_KEY_FILE_NONE, &error)) {
         trace ("loaded config file\n");
         // Interface
+        config->single_click_open = config_load_boolean (key_file,
+                                                        "Interface",
+                                                        "single_click_open",
+                                                        false);
         config->restore_column_config = config_load_boolean (key_file,
                                                             "Interface",
                                                             "restore_column_configuration",
                                                             false);
+        config->double_click_path = config_load_boolean (key_file,
+                                                         "Interface",
+                                                         "double_click_path",
+                                                         false);
         config->enable_list_tooltips = config_load_boolean (key_file,
                                                             "Interface",
                                                             "enable_list_tooltips",
@@ -386,9 +394,11 @@ config_load_default (FsearchConfig *config)
     config->num_results = 1000;
 
     // Interface
+    config->single_click_open = false;
     config->enable_dark_theme = false;
     config->enable_list_tooltips = true;
     config->restore_column_config = false;
+    config->double_click_path = false;
     config->show_menubar = true;
     config->show_statusbar = true;
     config->show_filter = true;
@@ -447,7 +457,9 @@ config_save (FsearchConfig *config)
     g_assert (key_file != NULL);
 
     // Interface
+    g_key_file_set_boolean (key_file, "Interface", "single_click_open", config->single_click_open);
     g_key_file_set_boolean (key_file, "Interface", "restore_column_configuration", config->restore_column_config);
+    g_key_file_set_boolean (key_file, "Interface", "double_click_path", config->double_click_path);
     g_key_file_set_boolean (key_file, "Interface", "enable_list_tooltips", config->enable_list_tooltips);
     g_key_file_set_boolean (key_file, "Interface", "enable_dark_theme", config->enable_dark_theme);
     g_key_file_set_boolean (key_file, "Interface", "show_menubar", config->show_menubar);

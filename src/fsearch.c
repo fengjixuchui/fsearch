@@ -57,12 +57,12 @@ struct _FsearchApplication
 };
 
 enum {
-    DATABASE_UPDATE,
-    DATABASE_UPDATED,
-    LAST_SIGNAL
+    DATABASE_UPDATE_STARTED,
+    DATABASE_UPDATE_FINISHED,
+    NUM_SIGNALS
 };
 
-static guint signals [LAST_SIGNAL];
+static guint signals [NUM_SIGNALS];
 
 G_DEFINE_TYPE (FsearchApplication, fsearch_application, GTK_TYPE_APPLICATION)
 
@@ -160,11 +160,10 @@ fsearch_options_handler(GApplication *gapp,
 
         load_database(fsearch);
         if (fsearch->db) {
-            db_save_locations (fsearch->db);
-            db_clear (fsearch->db);
+            db_free (fsearch->db);
         }
 
-        printf (" done!\n");
+        printf ("done!\n");
     }
 
     return (version || updatedb) ? 0 : -1;
@@ -222,8 +221,7 @@ fsearch_application_shutdown (GApplication *app)
     }
 
     if (fsearch->db) {
-        db_save_locations (fsearch->db);
-        db_clear (fsearch->db);
+        db_free (fsearch->db);
     }
     if (fsearch->pool) {
         fsearch_thread_pool_free (fsearch->pool);
@@ -240,23 +238,6 @@ fsearch_application_finalize (GObject *object)
     G_OBJECT_CLASS (fsearch_application_parent_class)->finalize (object);
 }
 
-static gboolean
-updated_database_signal_emit_cb (gpointer user_data)
-{
-    FsearchApplication *self = FSEARCH_APPLICATION (user_data);
-    fsearch_action_enable ("update_database");
-    g_signal_emit (self, signals [DATABASE_UPDATED], 0);
-    return G_SOURCE_REMOVE;
-}
-
-static gboolean
-update_database_signal_emit_cb (gpointer user_data)
-{
-    FsearchApplication *self = FSEARCH_APPLICATION (user_data);
-    g_signal_emit (self, signals [DATABASE_UPDATE], 0);
-    return G_SOURCE_REMOVE;
-}
-
 static void
 prepare_windows_for_db_update (FsearchApplication *app)
 {
@@ -270,6 +251,28 @@ prepare_windows_for_db_update (FsearchApplication *app)
         }
     }
     return;
+}
+
+static gboolean
+updated_database_signal_emit_cb (gpointer user_data)
+{
+    FsearchApplication *self = FSEARCH_APPLICATION_DEFAULT;
+    prepare_windows_for_db_update (self);
+    if (self->db) {
+        db_free (self->db);
+    }
+    self->db = (Database *)user_data;
+    fsearch_action_enable ("update_database");
+    g_signal_emit (self, signals [DATABASE_UPDATE_FINISHED], 0);
+    return G_SOURCE_REMOVE;
+}
+
+static gboolean
+update_database_signal_emit_cb (gpointer user_data)
+{
+    FsearchApplication *self = FSEARCH_APPLICATION (user_data);
+    g_signal_emit (self, signals [DATABASE_UPDATE_STARTED], 0);
+    return G_SOURCE_REMOVE;
 }
 
 #ifdef DEBUG
@@ -301,68 +304,49 @@ load_database (gpointer user_data)
     g_assert (user_data != NULL);
     g_assert (FSEARCH_IS_APPLICATION (user_data));
     FsearchApplication *app = FSEARCH_APPLICATION (user_data);
+
+    if (!app->config->locations) {
+        return NULL;
+    }
+
+    g_mutex_lock (&app->mutex);
+
     g_idle_add (update_database_signal_emit_cb, app);
 
+    Database *db = NULL;
+    timer_start ();
     if (!app->db) {
         // create new database
-        timer_start ();
-        app->db = db_new ();
+        db = db_new (app->config->locations,
+                          app->config->exclude_locations,
+                          app->config->exclude_files,
+                          app->config->exclude_hidden_items);
+        db_lock (db);
 
-        bool loaded = false;
-        bool build_new = false;
-        for (GList *l = app->config->locations; l != NULL; l = l->next) {
-            if (app->config->update_database_on_launch) {
-                if (db_location_add (app->db, l->data, build_location_callback)) {
-                    loaded = true;
-                    build_new = true;
-                }
-            }
-            else {
-                if (!db_location_load (app->db, l->data)) {
-                    if (db_location_add (app->db, l->data, build_location_callback)) {
-                        loaded = true;
-                        build_new = true;
-                    }
-                }
-                else {
-                    loaded = true;
-                }
-            }
+        if (app->config->update_database_on_launch || !db_load_from_file (db, NULL, NULL)) {
+            db_scan (db, build_location_callback);
+            db_save_locations (db);
         }
-        if (loaded) {
-            if (build_new) {
-                db_build_initial_entries_list (app->db);
-            }
-            else {
-                db_update_entries_list (app->db);
-            }
-        }
-        trace ("loaded db in:");
-        timer_stop ();
     }
     else {
-        trace ("update\n");
-        timer_start ();
-        db_clear (app->db);
-        if (app->config->locations) {
-            for (GList *l = app->config->locations; l != NULL; l = l->next) {
-                db_location_add (app->db, l->data, build_location_callback);
-            }
-            db_build_initial_entries_list (app->db);
-        }
-        trace ("loaded db in:");
-        timer_stop ();
+        db = db_new (app->config->locations,
+                          app->config->exclude_locations,
+                          app->config->exclude_files,
+                          app->config->exclude_hidden_items);
+        db_lock (db);
+
+        db_scan (db, build_location_callback);
+        db_save_locations (db);
     }
 
-    g_idle_add (updated_database_signal_emit_cb, app);
+    trace ("loaded db in: ");
+    timer_stop ();
+    db_unlock (db);
+
+    g_mutex_unlock (&app->mutex);
+    g_idle_add (updated_database_signal_emit_cb, db);
 
     return NULL;
-}
-
-static GThread *
-load_database_thread (FsearchApplication *app)
-{
-    return g_thread_new("fsearch_db_load_thread", load_database, app);
 }
 
 static void
@@ -413,12 +397,26 @@ preferences_activated (GSimpleAction *action,
 }
 
 void
+fsearch_application_update_listview_config (void)
+{
+    FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
+    GList *windows = gtk_application_get_windows (GTK_APPLICATION (app));
+
+    for (; windows; windows = windows->next) {
+        GtkWindow *window = windows->data;
+        fsearch_application_window_update_listview_config (FSEARCH_WINDOW_WINDOW (window));
+        break;
+    }
+}
+
+void
 fsearch_update_database (void)
 {
     FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
-    fsearch_action_disable ("update_database");
-    prepare_windows_for_db_update (app);
-    g_thread_new("fsearch_db_update_thread", load_database, app);
+    if (app->config->locations) {
+        fsearch_action_disable ("update_database");
+        g_thread_new("fsearch_db_update_thread", load_database, app);
+    }
     return;
 }
 
@@ -535,7 +533,7 @@ fsearch_application_activate (GApplication *app)
     }
     window = GTK_WINDOW (fsearch_application_window_new (FSEARCH_APPLICATION (app)));
     gtk_window_present (window);
-    load_database_thread (FSEARCH_APPLICATION (app));
+    fsearch_update_database ();
 }
 
 static void
@@ -550,8 +548,8 @@ fsearch_application_class_init (FsearchApplicationClass *klass)
     g_app_class->startup = fsearch_application_startup;
     g_app_class->shutdown = fsearch_application_shutdown;
 
-    signals [DATABASE_UPDATE] =
-        g_signal_new ("database-update",
+    signals [DATABASE_UPDATE_STARTED] =
+        g_signal_new ("database-update-started",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_LAST,
                       0,
@@ -559,8 +557,8 @@ fsearch_application_class_init (FsearchApplicationClass *klass)
                       G_TYPE_NONE,
                       0);
 
-    signals [DATABASE_UPDATED] =
-        g_signal_new ("database-updated",
+    signals [DATABASE_UPDATE_FINISHED] =
+        g_signal_new ("database-update-finished",
                       G_TYPE_FROM_CLASS (klass),
                       G_SIGNAL_RUN_LAST,
                       0,
