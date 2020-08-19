@@ -21,8 +21,8 @@
     <child internal-child="vbox">
       <object class="GtkBox">
         <property name="can_focus">False</property>
-        <property name="margin_left">4</property>
-        <property name="margin_right">4</property>
+        <property name="margin_start">4</property>
+        <property name="margin_end">4</property>
         <property name="margin_top">4</property>
         <property name="margin_bottom">4</property>
         <property name="orientation">vertical</property>
@@ -52,8 +52,8 @@
               <object class="GtkGrid">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">6</property>
-                <property name="margin_right">6</property>
+                <property name="margin_start">6</property>
+                <property name="margin_end">6</property>
                 <property name="margin_top">6</property>
                 <property name="margin_bottom">6</property>
                 <property name="row_spacing">6</property>
@@ -138,42 +138,12 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="halign">start</property>
-                    <property name="margin_left">6</property>
-                    <property name="label" translatable="yes">Behaviour after successfully opening a file</property>
-                  </object>
-                  <packing>
-                    <property name="left_attach">0</property>
-                    <property name="top_attach">8</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkComboBoxText" id="action_after_file_open">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="halign">end</property>
-                    <property name="hexpand">True</property>
-                    <property name="active">0</property>
-                    <items>
-                      <item id="FSEARCH_AFTER_FILE_OPEN_MINIMIZE" translatable="yes">Minimize</item>
-                      <item id="FSEARCH_AFTER_FILE_OPEN_CLOSE" translatable="yes">Close</item>
-                    </items>
-                  </object>
-                  <packing>
-                    <property name="left_attach">1</property>
-                    <property name="top_attach">8</property>
-                  </packing>
-                </child>
-                <child>
                   <object class="GtkCheckButton" id="action_after_file_open_keyboard">
                     <property name="label" translatable="yes">with keyboard shortcuts or menu entries</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="receives_default">False</property>
-                    <property name="margin_left">24</property>
+                    <property name="margin_start">24</property>
                     <property name="draw_indicator">True</property>
                   </object>
                   <packing>
@@ -188,7 +158,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="receives_default">False</property>
-                    <property name="margin_left">24</property>
+                    <property name="margin_start">24</property>
                     <property name="draw_indicator">True</property>
                   </object>
                   <packing>
@@ -291,6 +261,52 @@ since not every GTK+ theme provides a dark version.</property>
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkBox">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="margin_start">6</property>
+                    <property name="spacing">6</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="label" translatable="yes">Behaviour after successfully opening a file:</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText" id="action_after_file_open">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="hexpand">True</property>
+                        <property name="active">0</property>
+                        <items>
+                          <item id="FSEARCH_AFTER_FILE_OPEN_MINIMIZE" translatable="yes">Minimize</item>
+                          <item id="FSEARCH_AFTER_FILE_OPEN_CLOSE" translatable="yes">Close</item>
+                        </items>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="left_attach">0</property>
+                    <property name="top_attach">8</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
                   <placeholder/>
                 </child>
                 <child>
@@ -330,8 +346,8 @@ since not every GTK+ theme provides a dark version.</property>
               <object class="GtkGrid">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">6</property>
-                <property name="margin_right">6</property>
+                <property name="margin_start">6</property>
+                <property name="margin_end">6</property>
                 <property name="margin_top">6</property>
                 <property name="margin_bottom">6</property>
                 <property name="row_spacing">6</property>
@@ -426,8 +442,8 @@ since not every GTK+ theme provides a dark version.</property>
               <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">6</property>
-                <property name="margin_right">6</property>
+                <property name="margin_start">6</property>
+                <property name="margin_end">6</property>
                 <property name="margin_top">6</property>
                 <property name="margin_bottom">6</property>
                 <property name="orientation">vertical</property>
@@ -455,8 +471,8 @@ since not every GTK+ theme provides a dark version.</property>
                       <object class="GtkGrid">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="margin_left">6</property>
-                        <property name="margin_right">6</property>
+                        <property name="margin_start">6</property>
+                        <property name="margin_end">6</property>
                         <property name="margin_top">6</property>
                         <property name="margin_bottom">6</property>
                         <property name="row_spacing">6</property>
@@ -469,7 +485,7 @@ since not every GTK+ theme provides a dark version.</property>
                             <property name="spacing">6</property>
                             <child>
                               <object class="GtkButton" id="include_add_button">
-                                <property name="label" translatable="yes">Add</property>
+                                <property name="label" translatable="yes">Add…</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">True</property>
@@ -508,8 +524,8 @@ since not every GTK+ theme provides a dark version.</property>
                         </child>
                         <child>
                           <object class="GtkScrolledWindow">
-                            <property name="width_request">300</property>
-                            <property name="height_request">150</property>
+                            <property name="width_request">500</property>
+                            <property name="height_request">250</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="hexpand">True</property>
@@ -559,8 +575,8 @@ since not every GTK+ theme provides a dark version.</property>
                       <object class="GtkGrid">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="margin_left">6</property>
-                        <property name="margin_right">6</property>
+                        <property name="margin_start">6</property>
+                        <property name="margin_end">6</property>
                         <property name="margin_top">6</property>
                         <property name="margin_bottom">6</property>
                         <property name="row_spacing">6</property>
@@ -573,7 +589,7 @@ since not every GTK+ theme provides a dark version.</property>
                             <property name="spacing">6</property>
                             <child>
                               <object class="GtkButton" id="exclude_add_button">
-                                <property name="label" translatable="yes">Add</property>
+                                <property name="label" translatable="yes">Add…</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">True</property>
@@ -612,8 +628,8 @@ since not every GTK+ theme provides a dark version.</property>
                         </child>
                         <child>
                           <object class="GtkScrolledWindow">
-                            <property name="width_request">300</property>
-                            <property name="height_request">150</property>
+                            <property name="width_request">500</property>
+                            <property name="height_request">250</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="hexpand">True</property>
@@ -729,8 +745,8 @@ since not every GTK+ theme provides a dark version.</property>
               <object class="GtkGrid">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">6</property>
-                <property name="margin_right">6</property>
+                <property name="margin_start">6</property>
+                <property name="margin_end">6</property>
                 <property name="margin_top">6</property>
                 <property name="margin_bottom">6</property>
                 <property name="row_spacing">6</property>
@@ -740,6 +756,7 @@ since not every GTK+ theme provides a dark version.</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="halign">start</property>
+                    <property name="margin_start">6</property>
                     <property name="label" translatable="yes">Show warning dialogs when:</property>
                   </object>
                   <packing>
@@ -753,6 +770,7 @@ since not every GTK+ theme provides a dark version.</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
+                    <property name="margin_start">24</property>
                     <property name="draw_indicator">True</property>
                   </object>
                   <packing>

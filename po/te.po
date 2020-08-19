@@ -1,29 +1,25 @@
-# Russian translations for FSearch package.
-# Copyright (C) 2016 THE FSearch'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the FSearch package.
-# Automatically generated, 2016.
+# Telugu translations for fsearch package.
+# Copyright (C) 2020 Christian Boxdörfer
+# This file is distributed under the same license as the fsearch package.
+# Christian <christian.boxdoerfer@posteo.de>, 2020.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: FSearch 0.1beta\n"
+"Project-Id-Version: fsearch 0.1beta4.58-6c306-dirty\n"
 "Report-Msgid-Bugs-To: christian.boxdoerfer@posteo.de\n"
 "POT-Creation-Date: 2020-08-17 21:01+0200\n"
-"PO-Revision-Date: 2018-03-21 22:40+0000\n"
-"Last-Translator: Igor <f2404@yandex.ru>\n"
-"Language-Team: Russian <https://hosted.weblate.org/projects/fsearch/"
-"translations/ru/>\n"
-"Language: ru\n"
+"PO-Revision-Date: 2020-07-30 09:54+0200\n"
+"Last-Translator: Christian <christian.boxdoerfer@posteo.de>\n"
+"Language-Team: Telugu\n"
+"Language: te\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
-"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
-"X-Generator: Weblate 2.20-dev\n"
 
 #: src/fsearch_window.c:105 src/fsearch_window.c:380 src/fsearch_window.c:828
 #, c-format
 msgid "%'d Items"
-msgstr "%'d элемент(а/ов)"
+msgstr ""
 
 #: src/fsearch_window.c:627 src/fsearch_window_actions.c:454
 msgid "Failed to open file"
@@ -35,18 +31,17 @@ msgstr ""
 
 #: src/fsearch_window.c:834
 msgid "Last Updated: %Y-%m-%d %H:%M"
-msgstr "Последнее обновление: %Y-%m-%d %H:%M"
+msgstr ""
 
 #: src/fsearch_window.c:848 src/overlay.ui:143
-#, fuzzy, c-format
+#, c-format
 msgid "Loading Database…"
-msgstr "Загрузка базы данных..."
+msgstr ""
 
 #: src/fsearch_window.c:863 src/overlay.ui:213 src/fsearch.glade:1090
-#, fuzzy, c-format
-#| msgid "Updating Database..."
+#, c-format
 msgid "Updating Database…"
-msgstr "Обновление базы данных..."
+msgstr ""
 
 #: src/fsearch_window.c:1051
 msgid "Background tasks are active."
@@ -60,33 +55,32 @@ msgstr ""
 
 #: src/listview.c:143 src/menus.ui:80
 msgid "Name"
-msgstr "Имя"
+msgstr ""
 
 #: src/listview.c:172 src/fsearch_preferences_widgets.c:224
 #: src/fsearch_preferences_widgets.c:258 src/menus.ui:84
 msgid "Path"
-msgstr "Путь"
+msgstr ""
 
 #: src/listview.c:201 src/menus.ui:92
 msgid "Size"
-msgstr "Размер"
+msgstr ""
 
 #: src/listview.c:233 src/menus.ui:96
 msgid "Date Modified"
-msgstr "Дата изменения"
+msgstr ""
 
 #: src/listview.c:262 src/menus.ui:88
 msgid "Type"
-msgstr "Тип"
+msgstr ""
 
 #: src/fsearch.c:201
 msgid "Show version information"
 msgstr ""
 
 #: src/fsearch.c:208
-#, fuzzy
 msgid "Update the database"
-msgstr "Обновить базу данных"
+msgstr ""
 
 #: src/fsearch.c:420
 msgid "translator-credits"
@@ -95,39 +89,32 @@ msgstr ""
 #: src/fsearch.c:421
 msgid "A search utility focusing on performance and advanced features"
 msgstr ""
-"Инструмент поиска, нацеленный на быстродействие и продвинутые возможности"
 
 #: src/fsearch_window_actions.c:85
-#, fuzzy, c-format
+#, c-format
 msgid "Do you really want to open %d file(s)?"
-msgstr "Вы действительно хотите удалить"
+msgstr ""
 
 #: src/fsearch_window_actions.c:87
-#, fuzzy
 msgid "Opening Files…"
-msgstr "Открыть файл(ы)"
+msgstr ""
 
 #: src/fsearch_window_actions.c:167
-#, fuzzy, c-format
-#| msgid "Do you really want to remove"
+#, c-format
 msgid "Do you really want to remove %d file(s)?"
-msgstr "Вы действительно хотите удалить"
+msgstr ""
 
 #: src/fsearch_window_actions.c:171
-#, fuzzy
 msgid "Deleting files…"
-msgstr "Удаление файлов..."
+msgstr ""
 
 #: src/fsearch_window_actions.c:171
-#, fuzzy
 msgid "Moving files to trash…"
-msgstr "Перемещение файлов в корзину..."
+msgstr ""
 
 #: src/fsearch_preferences_widgets.c:223 src/fsearch_preferences_widgets.c:257
-#, fuzzy
-#| msgid "Enable RegEx"
 msgid "Enable"
-msgstr "Включить регулярные выражения"
+msgstr ""
 
 #: src/fsearch_preferences_widgets.c:225
 msgid "Update"
@@ -135,98 +122,95 @@ msgstr ""
 
 #: src/menus.ui:7
 msgid "_Open"
-msgstr "_Открыть"
+msgstr ""
 
 #: src/menus.ui:13
 msgid "Open _With"
-msgstr "От_крыть с помощью"
+msgstr ""
 
 #: src/menus.ui:27
 msgid "_Open Folder"
-msgstr "Открыть _папку"
+msgstr ""
 
 #: src/menus.ui:43
 msgid "_Copy"
-msgstr "_Копировать"
+msgstr ""
 
 #: src/menus.ui:49
 msgid "_Copy Filepath"
-msgstr "Копировать п_уть"
+msgstr ""
 
 #: src/menus.ui:56
 msgid "Move to _Trash"
-msgstr "_Переместить в корзину"
+msgstr ""
 
 #: src/menus.ui:62
 msgid "_Delete"
-msgstr "_Удалить"
+msgstr ""
 
 #: src/overlay.ui:31
 msgid "Empty Database"
-msgstr "Пустая база данных"
+msgstr ""
 
 #: src/overlay.ui:46
 msgid "Go to <b>Edit → Preferences → Database</b> and add some locations"
 msgstr ""
-"Перейдите в <b>Правка → Параметры → База данных</b> и добавьте пути поиска"
 
 #: src/overlay.ui:87
 msgid "Empty Query"
-msgstr "Пустой запрос"
+msgstr ""
 
 #: src/overlay.ui:102
 msgid "Press <b>Ctrl + F</b> and start typing"
-msgstr "Нажмите <b>Ctrl + F</b> и начинайте печатать"
+msgstr ""
 
 #: src/overlay.ui:158 src/overlay.ui:228
 msgid "…"
 msgstr ""
 
 #: src/overlay.ui:173
-#, fuzzy
-#| msgid "This may take a while."
 msgid "This won't take long."
-msgstr "Это может занять некоторое время."
+msgstr ""
 
 #: src/overlay.ui:243
 msgid "This may take a while."
-msgstr "Это может занять некоторое время."
+msgstr ""
 
 #: src/overlay.ui:283
 msgid "No Results Found"
-msgstr "Результаты не найдены"
+msgstr ""
 
 #: src/overlay.ui:298
 msgid "Try a different search"
-msgstr "Попробовать другой поиск"
+msgstr ""
 
 #: src/preferences.ui:17 src/fsearch.glade:342
 msgid "Preferences"
-msgstr "Параметры"
+msgstr ""
 
 #: src/preferences.ui:63
 msgid "Enable dark theme"
-msgstr "Включить тёмную тему"
+msgstr ""
 
 #: src/preferences.ui:76
 msgid "Show tooltips"
-msgstr "Показывать подсказки"
+msgstr ""
 
 #: src/preferences.ui:89
 msgid "Remember window size"
-msgstr "Запоминать размер окна"
+msgstr ""
 
 #: src/preferences.ui:102
 msgid "Remember column configuration"
-msgstr "Запоминать конфигурацию колонок"
+msgstr ""
 
 #: src/preferences.ui:115
 msgid "Show icons in name column"
-msgstr "Показывать иконки в колонке «имя»"
+msgstr ""
 
 #: src/preferences.ui:128
 msgid "Use binary units instead of decimal units"
-msgstr "Использовать бинарные элементы вместо десятичных"
+msgstr ""
 
 #: src/preferences.ui:142
 msgid "with keyboard shortcuts or menu entries"
@@ -241,8 +225,6 @@ msgid ""
 "INFO: \"Enable dark theme\" might not have an effect,\n"
 "since not every GTK+ theme provides a dark version."
 msgstr ""
-"ИНФОРМАЦИЯ: «Включить тёмную тему» может не иметь эффекта,\n"
-"т.к. не все темы GTK+ имеют тёмную версию."
 
 #: src/preferences.ui:239
 msgid "Open path with double click in path column"
@@ -266,31 +248,31 @@ msgstr ""
 
 #: src/preferences.ui:339
 msgid "Interface"
-msgstr "Интерфейс"
+msgstr ""
 
 #: src/preferences.ui:357
 msgid "Limit number of results:"
-msgstr "Ограничить количество результатов:"
+msgstr ""
 
 #: src/preferences.ui:385
 msgid "Search in path when query contains path separators"
-msgstr "Искать в пути к файлу/папке, когда запрос содержит разделители ('/')"
+msgstr ""
 
 #: src/preferences.ui:399
 msgid "Search as you type"
-msgstr "Искать по мере набора"
+msgstr ""
 
 #: src/preferences.ui:413
 msgid "Hide results when search is empty"
-msgstr "Спрятать результаты, когда поиск пустой"
+msgstr ""
 
 #: src/preferences.ui:434 src/fsearch.glade:821
 msgid "Search"
-msgstr "Поиск"
+msgstr ""
 
 #: src/preferences.ui:453
 msgid "Update database on start"
-msgstr "Обновлять базу данных при старте"
+msgstr ""
 
 #: src/preferences.ui:488 src/preferences.ui:592
 msgid "Add…"
@@ -298,40 +280,39 @@ msgstr ""
 
 #: src/preferences.ui:504 src/preferences.ui:608
 msgid "Remove"
-msgstr "Удалить"
+msgstr ""
 
 #: src/preferences.ui:551
 msgid "Follow symbolic links"
-msgstr "Следовать по символьным ссылкам"
+msgstr ""
 
 #: src/preferences.ui:568
 msgid "Include"
-msgstr "Включить"
+msgstr ""
 
 #: src/preferences.ui:655
 msgid "Exclude hidden files and folders"
-msgstr "Исключить скрытые файлы и папки"
+msgstr ""
 
 #: src/preferences.ui:676 src/preferences.ui:689
 msgid "Supports wildcards. Multiple entries must be separated by ';'"
 msgstr ""
-"Можно использовать шаблоны. Вхождения должны быть разделены с помощью ';'"
 
 #: src/preferences.ui:677
 msgid "Exclude files:"
-msgstr "Исключить файлы:"
+msgstr ""
 
 #: src/preferences.ui:690
 msgid "e.g. \".git;*.tmp\""
-msgstr "например, «.git;*.tmp»"
+msgstr ""
 
 #: src/preferences.ui:714
 msgid "Exclude"
-msgstr "Исключить"
+msgstr ""
 
 #: src/preferences.ui:737
 msgid "Database"
-msgstr "База данных"
+msgstr ""
 
 #: src/preferences.ui:760
 msgid "Show warning dialogs when:"
@@ -347,63 +328,59 @@ msgstr ""
 
 #: src/fsearch.glade:65
 msgid "Open File(s)"
-msgstr "Открыть файл(ы)"
+msgstr ""
 
 #: src/fsearch.glade:75
 msgid "Open With Other Application"
-msgstr "Открыть другой программой"
+msgstr ""
 
 #: src/fsearch.glade:80
 msgid "Open Containing Folder"
-msgstr "Открыть содержащую папку"
+msgstr ""
 
 #: src/fsearch.glade:83
 msgid "Open File(s) in File Manager"
-msgstr "Открыть файл(ы) в файловом менеджере"
+msgstr ""
 
 #: src/fsearch.glade:119
 msgid "Move to Trash"
-msgstr "Переместить в корзину"
+msgstr ""
 
 #: src/fsearch.glade:173
-#, fuzzy
-#| msgid "New Window"
 msgid "New window"
-msgstr "Новое окно"
+msgstr ""
 
 #: src/fsearch.glade:188
-#, fuzzy
-#| msgid "Update Database"
 msgid "Update database"
-msgstr "Обновить базу данных"
+msgstr ""
 
 #: src/fsearch.glade:222 src/fsearch.glade:694
 msgid "Search in Path"
-msgstr "Искать в пути к файлу/папке"
+msgstr ""
 
 #: src/fsearch.glade:236 src/fsearch.glade:704
 msgid "Match Case"
-msgstr "Учитывать регистр"
+msgstr ""
 
 #: src/fsearch.glade:250 src/fsearch.glade:714
 msgid "Enable RegEx"
-msgstr "Включить регулярные выражения"
+msgstr ""
 
 #: src/fsearch.glade:275 src/fsearch.glade:643
 msgid "Show Menubar"
-msgstr "Показать строку меню"
+msgstr ""
 
 #: src/fsearch.glade:289 src/fsearch.glade:653
 msgid "Show Statusbar"
-msgstr "Показать строку состояния"
+msgstr ""
 
 #: src/fsearch.glade:303 src/fsearch.glade:662
 msgid "Show Filter"
-msgstr "Показать фильтр"
+msgstr ""
 
 #: src/fsearch.glade:317 src/fsearch.glade:671
 msgid "Show Search Button"
-msgstr "Показать кнопку поиска"
+msgstr ""
 
 #: src/fsearch.glade:367
 msgid "About"
@@ -415,111 +392,107 @@ msgstr ""
 
 #: src/fsearch.glade:425
 msgid "_File"
-msgstr "_Файл"
+msgstr ""
 
 #: src/fsearch.glade:433
 msgid "New Window"
-msgstr "Новое окно"
+msgstr ""
 
 #: src/fsearch.glade:462
 msgid "Open Folder"
-msgstr "Открыть папку"
+msgstr ""
 
 #: src/fsearch.glade:497
 msgid "Update Database"
-msgstr "Обновить базу данных"
+msgstr ""
 
 #: src/fsearch.glade:532
 msgid "_Edit"
-msgstr "_Правка"
+msgstr ""
 
 #: src/fsearch.glade:593
 msgid "Deselect All"
-msgstr "Снять выделение"
+msgstr ""
 
 #: src/fsearch.glade:602
 msgid "Invert Selection"
-msgstr "Инвертировать выделение"
+msgstr ""
 
 #: src/fsearch.glade:631
 msgid "_View"
-msgstr "_Вид"
+msgstr ""
 
 #: src/fsearch.glade:683
 msgid "_Search"
-msgstr "П_оиск"
+msgstr ""
 
 #: src/fsearch.glade:727
 msgid "_Help"
-msgstr "_Справка"
+msgstr ""
 
 #: src/fsearch.glade:781
-#, fuzzy
-#| msgid "Search"
 msgid "Search…"
-msgstr "Поиск"
+msgstr ""
 
 #: src/fsearch.glade:796
 msgid "Select a Filter"
-msgstr "Выбрать фильтр"
+msgstr ""
 
 #: src/fsearch.glade:799
 msgid "All"
-msgstr "Все"
+msgstr ""
 
 #: src/fsearch.glade:800
 msgid "Folders"
-msgstr "Папки"
+msgstr ""
 
 #: src/fsearch.glade:801
 msgid "Files"
-msgstr "Файлы"
+msgstr ""
 
 #: src/fsearch.glade:957
 msgid "Number of Search Results"
-msgstr "Количество результатов поиска"
+msgstr ""
 
 #: src/fsearch.glade:958
 msgid "0 Items"
-msgstr "0 элементов"
+msgstr ""
 
 #: src/fsearch.glade:1013 src/fsearch.glade:1037
 msgid "0/0"
-msgstr "0/0"
+msgstr ""
 
 #: src/fsearch.glade:1104
 msgid "page0"
-msgstr "страница0"
+msgstr ""
 
 #: src/fsearch.glade:1128
 msgid "(empty)"
-msgstr "(пусто)"
+msgstr ""
 
 #: src/fsearch.glade:1139
 msgid "page1"
-msgstr "страница1"
+msgstr ""
 
 #: src/fsearch.glade:1183
 msgid "CASE"
-msgstr "РЕГИСТР"
+msgstr ""
 
 #: src/fsearch.glade:1235
 msgid "PATH"
-msgstr "ПУТЬ"
+msgstr ""
 
 #: src/fsearch.glade:1287
 msgid "REGEX"
-msgstr "РЕГ ВЫР"
+msgstr ""
 
 #: data/fsearch.desktop.in.in:5
 msgid "FSearch"
-msgstr "FSearch"
+msgstr ""
 
 #: data/fsearch.desktop.in.in:7
-#, fuzzy
 msgid "A file search application focusing on performance and advanced features"
 msgstr ""
-"Инструмент поиска, нацеленный на быстродействие и продвинутые возможности"
 
 #: data/fsearch.desktop.in.in:12
 msgid "system-search"
@@ -529,31 +502,3 @@ msgstr ""
 msgid ""
 "search;fsearch;files;folders;music;video;documents;find;tool;everything;"
 msgstr ""
-
-#, fuzzy
-#~ msgid "Loading Database..."
-#~ msgstr "Загрузка базы данных..."
-
-#~ msgid "..."
-#~ msgstr "..."
-
-#~ msgid "Updating Database..."
-#~ msgstr "Обновление базы данных..."
-
-#~ msgid "Search..."
-#~ msgstr "Поиск..."
-
-#~ msgid "Add"
-#~ msgstr "Добавить"
-
-#~ msgid "files?"
-#~ msgstr "файлы?"
-
-#~ msgid "Other Application"
-#~ msgstr "Другая программа"
-
-#~ msgid "C_ut"
-#~ msgstr "_Вырезать"
-
-#~ msgid "Selected Folder and Files"
-#~ msgstr "Выбранные папки и файлы"

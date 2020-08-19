@@ -24,6 +24,7 @@
 #include <ctype.h>
 #include <glib/gstdio.h>
 
+#include "debug.h"
 #include "iconstore.h"
 #include "database_search.h"
 #include "btree.h"
@@ -103,8 +104,6 @@ static void list_model_sortable_set_default_sort_func (GtkTreeSortable *sortable
                                                        GDestroyNotify destroy_func);
 
 static gboolean list_model_sortable_has_default_sort_func (GtkTreeSortable *sortable);
-
-void list_model_sort (ListModel *list_model);
 
 static GObjectClass *parent_class = NULL;  /* GObject stuff - nothing to worry about */
 
@@ -812,8 +811,8 @@ list_model_sortable_get_sort_column_id (GtkTreeSortable *sortable,
 
 static void
 list_model_sortable_set_sort_column_id (GtkTreeSortable *sortable,
-        gint             sort_col_id,
-        GtkSortType      order)
+                                        gint             sort_col_id,
+                                        GtkSortType      order)
 {
     ListModel *list_model;
 
@@ -941,12 +940,18 @@ list_model_compare_records (gint sort_id, DatabaseSearchEntry *a, DatabaseSearch
                 btree_node_get_path_full (node_b, path_b, sizeof (path_b));
                 type_b = get_file_type (b, path_b);
 
-                if ((type_a) && (type_b)) {
+                if (type_a && type_b) {
                     return_val = strverscmp (type_a, type_b);
-                    g_free (type_a);
-                    g_free (type_b);
-                    return return_val;
                 }
+                if (type_a) {
+                    g_free (type_a);
+                    type_a = NULL;
+                }
+                if (type_b) {
+                    g_free (type_b);
+                    type_b = NULL;
+                }
+                return return_val;
 
             }
         case SORT_ID_SIZE:
@@ -986,28 +991,85 @@ list_model_qsort_compare_func (DatabaseSearchEntry **a, DatabaseSearchEntry **b,
 }
 
 void
+list_model_sort_init (ListModel *list_model, char *sort_by, bool sort_ascending)
+{
+    g_return_if_fail (list_model);
+    g_return_if_fail (IS_LIST_MODEL(list_model));
+
+    if (sort_by) {
+        if (!strcmp (sort_by, "Name")) {
+            list_model->sort_id = SORT_ID_NAME;
+        }
+        else if (!strcmp (sort_by, "Path")) {
+            list_model->sort_id = SORT_ID_PATH;
+        }
+        else if (!strcmp (sort_by, "Type")) {
+            list_model->sort_id = SORT_ID_TYPE;
+        }
+        else if (!strcmp (sort_by, "Size")) {
+            list_model->sort_id = SORT_ID_SIZE;
+        }
+        else if (!strcmp (sort_by, "Date Modified")) {
+            list_model->sort_id = SORT_ID_CHANGED;
+        }
+
+        if (sort_ascending) {
+            list_model->sort_order = GTK_SORT_ASCENDING;
+        }
+        else {
+            list_model->sort_order = GTK_SORT_DESCENDING;
+        }
+    }
+}
+
+#ifdef DEBUG
+static struct timeval tm1;
+#endif
+
+static inline void timer_start()
+{
+#ifdef DEBUG
+    gettimeofday(&tm1, NULL);
+#endif
+}
+
+static inline void timer_stop()
+{
+#ifdef DEBUG
+    struct timeval tm2;
+    gettimeofday(&tm2, NULL);
+
+    unsigned long long t = 1000 * (tm2.tv_sec - tm1.tv_sec) + (tm2.tv_usec - tm1.tv_usec) / 1000;
+    trace ("%llu ms\n", t);
+#endif
+}
+
+void
 list_model_sort (ListModel *list_model)
 {
     g_return_if_fail (list_model);
     g_return_if_fail (IS_LIST_MODEL(list_model));
     g_return_if_fail (list_model->results);
 
-    if (list_model->sort_id == SORT_ID_NONE)
+    if (list_model->sort_id == SORT_ID_NONE) {
         return;
+    }
 
-    if (list_model->results->len <= 1)
+    if (list_model->results->len <= 1) {
         return;
+    }
 
+    trace ("[list_model] sort started\n");
+    timer_start ();
     /* resort */
     g_ptr_array_sort_with_data (list_model->results,
-            (GCompareDataFunc) list_model_qsort_compare_func,
-            list_model);
+                                (GCompareDataFunc) list_model_qsort_compare_func,
+                                list_model);
 
     /* let other objects know about the new order */
     gint *neworder = g_new0(gint, list_model->results->len);
 
-    for (uint32_t i = 0; i < list_model->results->len; ++i)
-    {
+    for (uint32_t i = 0; i < list_model->results->len; ++i) {
         /* Note that the API reference might be wrong about
          * this, see bug number 124790 on bugs.gnome.org.
          * Both will work, but one will give you 'jumpy'
@@ -1019,11 +1081,12 @@ list_model_sort (ListModel *list_model)
     }
 
     GtkTreePath *path = gtk_tree_path_new();
-
     gtk_tree_model_rows_reordered(GTK_TREE_MODEL(list_model), path, NULL, neworder);
 
     gtk_tree_path_free(path);
     g_free(neworder);
+    trace ("[list_model] sort finished in ");
+    timer_stop ();
 }
 
 void
@@ -1031,3 +1094,4 @@ list_model_set_results (ListModel *list, GPtrArray *results)
 {
     list->results = results;
 }
+

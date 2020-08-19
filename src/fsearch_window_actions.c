@@ -63,29 +63,28 @@ action_set_enabled (GActionGroup *group, const gchar *action_name, bool value)
 static bool
 confirm_action (GtkWidget *parent, const char *title, const char *question, int limit, int value)
 {
-    if (value >= limit) {
-        gint response = ui_utils_run_gtk_dialog (parent,
-                                                 GTK_MESSAGE_WARNING,
-                                                 GTK_BUTTONS_YES_NO,
-                                                 title,
-                                                 question);
-        if (response == GTK_RESPONSE_YES) {
-            return true;
-        }
-        return false;
-    }
-    else {
+    if (value < limit) {
         return true;
     }
+
+    gint response = ui_utils_run_gtk_dialog (parent,
+                                             GTK_MESSAGE_WARNING,
+                                             GTK_BUTTONS_YES_NO,
+                                             title,
+                                             question);
+    if (response == GTK_RESPONSE_YES) {
+        return true;
+    }
+    return false;
 }
 
 static bool
 confirm_file_open_action (GtkWidget *parent, int num_files)
 {
     char question[1024] = "";
-    snprintf (question, sizeof (question), "%s %d %s", _("Do you really want to open"), num_files, _("files?"));
+    snprintf (question, sizeof (question), _("Do you really want to open %d file(s)?"), num_files);
 
-    return confirm_action (parent, _("Opening Files..."), question, 10, num_files);
+    return confirm_action (parent, _("Opening Files…"), question, 10, num_files);
 }
 
 static GList *
@@ -116,13 +115,15 @@ copy_file (GtkTreeModel *model,
 {
     DatabaseSearchEntry *entry = (DatabaseSearchEntry *)iter->user_data;
     GList **file_list = (GList **)userdata;
-    if (entry) {
-        BTreeNode *node = db_search_entry_get_node (entry);
-        char path[PATH_MAX] = "";
-        bool res = btree_node_get_path_full (node, path, sizeof (path));
-        if (res) {
-            *file_list = g_list_prepend (*file_list, g_strdup (path));
-        }
+    if (!entry) {
+        return;
+    }
+
+    BTreeNode *node = db_search_entry_get_node (entry);
+    char path_str[PATH_MAX] = "";
+    bool res = btree_node_get_path_full (node, path_str, sizeof (path_str));
+    if (res) {
+        *file_list = g_list_prepend (*file_list, g_strdup (path_str));
     }
 }
 
@@ -163,7 +164,7 @@ fsearch_delete_selection (GSimpleAction *action,
 
     if (delete || num_selected_rows > 20) {
         char error_msg[PATH_MAX] = "";
-        snprintf (error_msg, sizeof (error_msg), "%s %d %s", _("Do you really want to remove"), num_selected_rows, _("files?"));
+        snprintf (error_msg, sizeof (error_msg), _("Do you really want to remove %d file(s)?"), num_selected_rows);
         gint response = ui_utils_run_gtk_dialog (GTK_WIDGET (self),
                                                  GTK_MESSAGE_WARNING,
                                                  GTK_BUTTONS_OK_CANCEL,
@@ -291,13 +292,13 @@ fsearch_window_action_copy (GSimpleAction *action,
 {
     FsearchApplicationWindow *self = user_data;
     GtkTreeSelection *selection = fsearch_application_window_get_listview_selection (self);
-    if (selection) {
-        //guint selected_rows = gtk_tree_selection_count_selected_rows (selection);
-        GList *file_list = NULL;
-        gtk_tree_selection_selected_foreach (selection, copy_file, &file_list);
-        file_list = g_list_reverse (file_list);
-        clipboard_copy_file_list (file_list, 1);
+    if (!selection) {
+        return;
     }
+    GList *file_list = NULL;
+    gtk_tree_selection_selected_foreach (selection, copy_file, &file_list);
+    file_list = g_list_reverse (file_list);
+    clipboard_copy_file_list (file_list, 1);
 }
 
 static void
@@ -307,12 +308,13 @@ fsearch_window_action_copy_filepath (GSimpleAction *action,
 {
     FsearchApplicationWindow *self = user_data;
     GtkTreeSelection *selection = fsearch_application_window_get_listview_selection (self);
-    if (selection) {
-        GList *file_list = NULL;
-        gtk_tree_selection_selected_foreach (selection, copy_file, &file_list);
-        file_list = g_list_reverse (file_list);
-        clipboard_copy_filepath_list (file_list);
+    if (!selection) {
+        return;
     }
+    GList *file_list = NULL;
+    gtk_tree_selection_selected_foreach (selection, copy_file, &file_list);
+    file_list = g_list_reverse (file_list);
+    clipboard_copy_filepath_list (file_list);
 }
 
 static void
@@ -322,14 +324,16 @@ open_cb (GtkTreeModel *model,
          gpointer data)
 {
     DatabaseSearchEntry *entry = (DatabaseSearchEntry *)iter->user_data;
-    if (entry) {
-        BTreeNode *node = db_search_entry_get_node (entry);
-        if (node) {
-            if (!launch_node (node)) {
-                bool *open_failed = data;
-                *open_failed = true;
-            }
-        }
+    if (!entry) {
+        return;
+    }
+    BTreeNode *node = db_search_entry_get_node (entry);
+    if (!node) {
+        return;
+    }
+    if (!launch_node (node)) {
+        bool *open_failed = data;
+        *open_failed = true;
     }
 }
 
@@ -340,16 +344,17 @@ open_with_cb (GtkTreeModel *model,
               gpointer data)
 {
     DatabaseSearchEntry *entry = (DatabaseSearchEntry *)iter->user_data;
-    if (entry) {
-        BTreeNode *node = db_search_entry_get_node (entry);
-        if (node) {
-            BTreeNode * node = db_search_entry_get_node (entry);
-            char path_name[PATH_MAX] = "";
-            btree_node_get_path_full (node, path_name, sizeof (path_name));
-            GList **list = data;
-            *list = g_list_append (*list, g_file_new_for_path (path_name));
-        }
+    if (!entry) {
+        return;
     }
+    BTreeNode *node = db_search_entry_get_node (entry);
+    if (!node) {
+        return;
+    }
+    char path_name[PATH_MAX] = "";
+    btree_node_get_path_full (node, path_name, sizeof (path_name));
+    GList **list = data;
+    *list = g_list_append (*list, g_file_new_for_path (path_name));
 }
 
 void
@@ -471,15 +476,17 @@ open_folder_cb (GtkTreeModel *model,
                 gpointer data)
 {
     DatabaseSearchEntry *entry = (DatabaseSearchEntry *)iter->user_data;
-    if (entry) {
-        BTreeNode *node = db_search_entry_get_node (entry);
-        if (node) {
-            FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
-            if (!launch_node_path (node, config->folder_open_cmd)) {
-                bool *open_failed = data;
-                *open_failed = true;
-            }
-        }
+    if (!entry) {
+        return;
+    }
+    BTreeNode *node = db_search_entry_get_node (entry);
+    if (!node) {
+        return;
+    }
+    FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
+    if (!launch_node_path (node, config->folder_open_cmd)) {
+        bool *open_failed = data;
+        *open_failed = true;
     }
 }
 
@@ -616,7 +623,9 @@ fsearch_window_action_show_menubar (GSimpleAction *action,
     FsearchApplicationWindow *self = user_data;
     g_simple_action_set_state (action, variant);
     GtkWidget *menubar = GTK_WIDGET (fsearch_application_window_get_menubar (self));
+    GtkWidget *app_menu = GTK_WIDGET (fsearch_application_window_get_app_menu (self));
     gtk_widget_set_visible (menubar, g_variant_get_boolean (variant));
+    gtk_widget_set_visible (app_menu, !g_variant_get_boolean (variant));
     FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
     config->show_menubar = g_variant_get_boolean (variant);
 }
@@ -700,7 +709,7 @@ fsearch_window_action_show_name_column (GSimpleAction *action,
         listview_remove_column (list, LIST_MODEL_COL_NAME);
     }
     else {
-        listview_add_column (list, LIST_MODEL_COL_NAME, 250, 0);
+        listview_add_column (list, LIST_MODEL_COL_NAME, 250, 0, self);
     }
     //FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
     //config->show_name_column = g_variant_get_boolean (variant);
@@ -719,7 +728,7 @@ fsearch_window_action_show_path_column (GSimpleAction *action,
         listview_remove_column (list, LIST_MODEL_COL_PATH);
     }
     else {
-        listview_add_column (list, LIST_MODEL_COL_PATH, 250, 1);
+        listview_add_column (list, LIST_MODEL_COL_PATH, 250, 1, self);
     }
     FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
     config->show_path_column = g_variant_get_boolean (variant);
@@ -738,7 +747,7 @@ fsearch_window_action_show_type_column (GSimpleAction *action,
         listview_remove_column (list, LIST_MODEL_COL_TYPE);
     }
     else {
-        listview_add_column (list, LIST_MODEL_COL_TYPE, 100, 2);
+        listview_add_column (list, LIST_MODEL_COL_TYPE, 100, 2, self);
     }
     FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
     config->show_type_column = g_variant_get_boolean (variant);
@@ -757,7 +766,7 @@ fsearch_window_action_show_size_column (GSimpleAction *action,
         listview_remove_column (list, LIST_MODEL_COL_SIZE);
     }
     else {
-        listview_add_column (list, LIST_MODEL_COL_SIZE, 75, 3);
+        listview_add_column (list, LIST_MODEL_COL_SIZE, 75, 3, self);
     }
     FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
     config->show_size_column = g_variant_get_boolean (variant);
@@ -776,7 +785,7 @@ fsearch_window_action_show_modified_column (GSimpleAction *action,
         listview_remove_column (list, LIST_MODEL_COL_CHANGED);
     }
     else {
-        listview_add_column (list, LIST_MODEL_COL_CHANGED, 75, 4);
+        listview_add_column (list, LIST_MODEL_COL_CHANGED, 75, 4, self);
     }
     FsearchConfig *config = fsearch_application_get_config (FSEARCH_APPLICATION_DEFAULT);
     config->show_modified_column = g_variant_get_boolean (variant);

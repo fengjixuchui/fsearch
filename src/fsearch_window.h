@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <gtk/gtk.h>
 
 #include "fsearch.h"
+#include "query.h"
 
 G_BEGIN_DECLS
 
@@ -57,6 +58,9 @@ GtkWidget *
 fsearch_application_window_get_search_in_path_revealer (FsearchApplicationWindow *self);
 
 GtkWidget *
+fsearch_application_window_get_app_menu (FsearchApplicationWindow *self);
+
+GtkWidget *
 fsearch_application_window_get_menubar (FsearchApplicationWindow *self);
 
 GtkEntry *
@@ -79,6 +83,9 @@ fsearch_application_window_remove_model (gpointer window);
 
 void
 fsearch_application_window_update_database_label (FsearchApplicationWindow *self, const char *text);
+
+FsearchQueryHighlight *
+fsearch_application_window_get_query_highlight (FsearchApplicationWindow *self);
 
 void
 fsearch_application_window_update_results (void *data);

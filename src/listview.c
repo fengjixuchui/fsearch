@@ -22,21 +22,14 @@
 
 #include <glib/gi18n.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "listview.h"
 #include "list_model.h"
 #include "fsearch.h"
+#include "database_search.h"
 #include "debug.h"
-
-GtkTreeView *
-listview_new (void)
-{
-    GtkTreeView *list = GTK_TREE_VIEW (gtk_tree_view_new ());
-    gtk_tree_view_set_fixed_height_mode (list, TRUE);
-    gtk_widget_set_has_tooltip (GTK_WIDGET (list), TRUE);
-
-    return list;
-}
 
 static void
 on_listview_column_width_changed (GtkTreeViewColumn *col,
@@ -63,7 +56,7 @@ on_listview_column_width_changed (GtkTreeViewColumn *col,
             config->modified_column_width = width;
             break;
         default:
-            trace ("width changed: unknown column\n");
+            trace ("[listview] width of unknown column changed\n");
     }
 }
 
@@ -116,8 +109,82 @@ listview_column_set_size (GtkTreeViewColumn *col, int32_t size)
     gtk_tree_view_column_set_expand (col, FALSE);
 }
 
-void
-listview_add_name_column (GtkTreeView *list, int32_t size, int32_t pos)
+static void
+listview_path_cell_data_func (GtkTreeViewColumn *col, 
+                              GtkCellRenderer *cell,
+                              GtkTreeModel *tree_model,
+                              GtkTreeIter *iter,
+                              gpointer data)
+{
+    FsearchApplicationWindow *win = (FsearchApplicationWindow *)data;
+    FsearchQueryHighlight *q = fsearch_application_window_get_query_highlight (win);
+    if (!q) {
+        return;
+    }
+
+    DatabaseSearchEntry *entry = iter->user_data;
+    BTreeNode *node = db_search_entry_get_node (entry);
+    if (!node) {
+        return;
+    }
+
+    char path[PATH_MAX] = "";
+    if ((q->has_separator && q->auto_search_in_path) || q->search_in_path) {
+        btree_node_get_path (node, path, sizeof (path));
+    }
+    else {
+        g_object_set (G_OBJECT (cell),
+                      "attributes",
+                      NULL,
+                      NULL);
+        return;
+    }
+
+    PangoAttrList *attr = fsearch_query_highlight_match (q, path);
+    if (!attr) {
+        return;
+    }
+
+    g_object_set (G_OBJECT (cell),
+                  "attributes",
+                  attr,
+                  NULL);
+    pango_attr_list_unref (attr);
+}
+
+static void
+listview_name_cell_data_func (GtkTreeViewColumn *col, 
+                              GtkCellRenderer *cell,
+                              GtkTreeModel *tree_model,
+                              GtkTreeIter *iter,
+                              gpointer data)
+{
+    FsearchApplicationWindow *win = (FsearchApplicationWindow *)data;
+    FsearchQueryHighlight *q = fsearch_application_window_get_query_highlight (win);
+    if (!q) {
+        return;
+    }
+
+    DatabaseSearchEntry *entry = iter->user_data;
+    BTreeNode *node = db_search_entry_get_node (entry);
+    if (!node) {
+        return;
+    }
+
+    PangoAttrList *attr = fsearch_query_highlight_match (q, node->name);
+    if (!attr) {
+        return;
+    }
+
+    g_object_set (G_OBJECT (cell),
+                  "attributes",
+                  attr,
+                  NULL);
+    pango_attr_list_unref (attr);
+}
+
+static void
+listview_add_name_column (GtkTreeView *list, int32_t size, int32_t pos, FsearchApplicationWindow *win)
 {
     GtkTreeViewColumn *col = gtk_tree_view_column_new();
     GtkCellRenderer *renderer = NULL;
@@ -152,13 +219,15 @@ listview_add_name_column (GtkTreeView *list, int32_t size, int32_t pos)
     gtk_tree_view_column_set_expand (col, TRUE);
     listview_column_add_label (col, _("Name"));
 
+    gtk_tree_view_column_set_cell_data_func (col, renderer, (GtkTreeCellDataFunc)listview_name_cell_data_func, win, NULL);
+
     g_signal_connect (col, "notify::width",
                       G_CALLBACK (on_listview_column_width_changed),
                       NULL);
 }
 
-void
-listview_add_path_column (GtkTreeView *list, int32_t size, int32_t pos)
+static void
+listview_add_path_column (GtkTreeView *list, int32_t size, int32_t pos, FsearchApplicationWindow *win)
 {
     GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
     g_object_set (G_OBJECT (renderer),
@@ -181,12 +250,14 @@ listview_add_path_column (GtkTreeView *list, int32_t size, int32_t pos)
     gtk_tree_view_insert_column (list, col, pos);
     listview_column_add_label (col, _("Path"));
 
+    gtk_tree_view_column_set_cell_data_func (col, renderer, (GtkTreeCellDataFunc)listview_path_cell_data_func, win, NULL);
+
     g_signal_connect (col, "notify::width",
                       G_CALLBACK (on_listview_column_width_changed),
                       NULL);
 }
 
-void
+static void
 listview_add_size_column (GtkTreeView *list, int32_t size, int32_t pos)
 {
     GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
@@ -215,7 +286,7 @@ listview_add_size_column (GtkTreeView *list, int32_t size, int32_t pos)
                       NULL);
 }
 
-void
+static void
 listview_add_modified_column (GtkTreeView *list, int32_t size, int32_t pos)
 {
     GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
@@ -247,7 +318,7 @@ listview_add_modified_column (GtkTreeView *list, int32_t size, int32_t pos)
                       NULL);
 }
 
-void
+static void
 listview_add_type_column (GtkTreeView *list, int32_t size, int32_t pos)
 {
     GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
@@ -277,15 +348,15 @@ listview_add_type_column (GtkTreeView *list, int32_t size, int32_t pos)
 }
 
 void
-listview_add_column (GtkTreeView *list, uint32_t col_type, int32_t size, int32_t pos)
+listview_add_column (GtkTreeView *list, uint32_t col_type, int32_t size, int32_t pos, FsearchApplicationWindow *win)
 {
     switch (col_type) {
         case LIST_MODEL_COL_ICON:
         case LIST_MODEL_COL_NAME:
-            listview_add_name_column (list, size, pos);
+            listview_add_name_column (list, size, pos, win);
             break;
         case LIST_MODEL_COL_PATH:
-            listview_add_path_column (list, size, pos);
+            listview_add_path_column (list, size, pos, win);
             break;
         case LIST_MODEL_COL_TYPE:
             listview_add_type_column (list, size, pos);
@@ -297,32 +368,37 @@ listview_add_column (GtkTreeView *list, uint32_t col_type, int32_t size, int32_t
             listview_add_size_column (list, size, pos);
             break;
         default:
-            trace ("add column: unknown column type\n");
+            trace ("[listview] trying add column of unknown column type\n");
     }
 }
 
 void
-listview_add_default_columns (GtkTreeView *view)
+listview_add_default_columns (GtkTreeView *view, FsearchApplicationWindow *win)
 {
     listview_add_column (view,
                          LIST_MODEL_COL_NAME,
                          250,
-                         0);
+                         0,
+                         win);
     listview_add_column (view, LIST_MODEL_COL_PATH,
                          250,
-                         1);
+                         1,
+                         win);
     listview_add_column (view,
                          LIST_MODEL_COL_TYPE,
                          100,
-                         2);
+                         2,
+                         NULL);
     listview_add_column (view,
                          LIST_MODEL_COL_SIZE,
                          75,
-                         3);
+                         3,
+                         NULL);
     listview_add_column (view,
                          LIST_MODEL_COL_CHANGED,
                          125,
-                         4);
+                         4,
+                         NULL);
 }
 
 void
@@ -333,18 +409,14 @@ listview_remove_column_at_pos (GtkTreeView *view, int32_t pos)
 void
 listview_remove_column (GtkTreeView *view, uint32_t col_type)
 {
-    GList *columns = gtk_tree_view_get_columns (view);
-    GList *temp = columns;
-    while (temp) {
-        int32_t id = gtk_tree_view_column_get_sort_column_id (temp->data) + 1;
+    for (int i = 0; i < LIST_MODEL_N_COLUMNS; i++) {
+        GtkTreeViewColumn *col = gtk_tree_view_get_column (view, i);
+        int32_t id = gtk_tree_view_column_get_sort_column_id (col) + 1;
         if (id == col_type) {
-            gtk_tree_view_remove_column (view, temp->data);
+            gtk_tree_view_remove_column (view, col);
             break;
         }
-        temp = temp->next;
     }
-    g_list_free (columns);
-    columns = NULL;
 }
 
 uint32_t

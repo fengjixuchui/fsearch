@@ -70,6 +70,9 @@ struct _FsearchConfig
     bool show_size_column;
     bool show_modified_column;
 
+    char *sort_by;
+    bool sort_ascending;
+
     uint32_t name_column_width;
     uint32_t path_column_width;
     uint32_t type_column_width;
@@ -109,6 +112,12 @@ config_save (FsearchConfig *config);
 
 void
 config_build_dir (char *path, size_t len);
+
+bool
+config_cmp (FsearchConfig *c1, FsearchConfig *c2);
+
+FsearchConfig *
+config_copy (FsearchConfig *config);
 
 void
 config_free (FsearchConfig *config);

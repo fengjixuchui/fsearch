@@ -39,13 +39,19 @@ FsearchApplication     *fsearch_application_new                  (void);
 G_END_DECLS
 
 void
-fsearch_update_database (void);
+fsearch_database_update (bool fullscan);
 
-Database *
+FsearchDatabase *
 fsearch_application_get_db (FsearchApplication *fsearch);
 
 FsearchConfig *
 fsearch_application_get_config (FsearchApplication *fsearch);
+
+void
+fsearch_application_state_lock (FsearchApplication *fsearch);
+
+void
+fsearch_application_state_unlock (FsearchApplication *fsearch);
 
 void
 fsearch_application_update_listview_config (void);
