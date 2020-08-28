@@ -251,6 +251,7 @@ fsearch_application_window_constructed (GObject *object)
 
     G_OBJECT_CLASS (fsearch_application_window_parent_class)->constructed (object);
 
+    self->num_searches_active = 0;
     self->search = NULL;
     self->search = db_search_new (fsearch_application_get_thread_pool (FSEARCH_APPLICATION_DEFAULT));
     g_mutex_init (&self->mutex);
@@ -348,6 +349,17 @@ update_statusbar (FsearchApplicationWindow *win, const char *text)
 }
 
 static gboolean
+search_cancelled_cb (gpointer user_data)
+{
+    FsearchApplicationWindow *win = user_data;
+    if (!win) {
+        return FALSE;
+    }
+    win->num_searches_active--;
+    return FALSE;
+}
+
+static gboolean
 update_model_cb (gpointer user_data)
 {
     DatabaseSearchResult *result = user_data;
@@ -378,6 +390,7 @@ update_model_cb (gpointer user_data)
             win->query_highlight = fsearch_query_highlight_new (text,
                                                                 config->enable_regex,
                                                                 config->match_case,
+                                                                config->auto_match_case,
                                                                 config->auto_search_in_path,
                                                                 config->search_in_path);
         }
@@ -414,6 +427,12 @@ update_model_cb (gpointer user_data)
     free (result);
     result = NULL;
     return FALSE;
+}
+
+void
+fsearch_application_window_search_cancelled (void *data)
+{
+    g_idle_add (search_cancelled_cb, data);
 }
 
 void
@@ -462,8 +481,10 @@ perform_search (FsearchApplicationWindow *win)
                                          db,
                                          filter,
                                          fsearch_application_window_update_results, win,
+                                         fsearch_application_window_search_cancelled, win,
                                          max_results,
                                          config->match_case,
+                                         config->auto_match_case,
                                          config->enable_regex,
                                          config->auto_search_in_path,
                                          config->search_in_path,

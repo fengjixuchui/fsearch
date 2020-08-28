@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <fnmatch.h>
 #include "query.h"
+#include "utf8.h"
 #include "string_utils.h"
 
 FsearchQuery *
@@ -30,8 +31,11 @@ fsearch_query_new (const char *query,
                    FsearchFilter filter,
                    void (*callback)(void *),
                    void *callback_data,
+                   void (*callback_cancelled)(void *),
+                   void *callback_cancelled_data,
                    uint32_t max_results,
                    bool match_case,
+                   bool auto_match_case,
                    bool enable_regex,
                    bool auto_search_in_path,
                    bool search_in_path,
@@ -46,10 +50,13 @@ fsearch_query_new (const char *query,
     q->filter = filter;
     q->callback = callback;
     q->callback_data = callback_data;
+    q->callback_cancelled = callback_cancelled;
+    q->callback_cancelled_data = callback_cancelled_data;
     q->max_results = max_results;
     q->match_case = match_case;
     q->enable_regex = enable_regex;
     q->auto_search_in_path = auto_search_in_path;
+    q->auto_match_case = auto_match_case;
     q->search_in_path = search_in_path;
     q->pass_on_empty_query = pass_on_empty_query;
     return q;
@@ -170,7 +177,7 @@ fsearch_query_highlight_token_new ()
 }
 
 FsearchQueryHighlight *
-fsearch_query_highlight_new (const char *text, bool enable_regex, bool match_case, bool auto_search_in_path, bool search_in_path)
+fsearch_query_highlight_new (const char *text, bool enable_regex, bool match_case, bool auto_match_case, bool auto_search_in_path, bool search_in_path)
 {
     if (!text) {
         return NULL;
@@ -180,16 +187,18 @@ fsearch_query_highlight_new (const char *text, bool enable_regex, bool match_cas
     assert (q != NULL);
 
     q->auto_search_in_path = auto_search_in_path;
+    q->auto_match_case = auto_match_case;
     q->search_in_path = search_in_path;
 
-    bool has_uppercase = fs_str_has_upper (text);
     q->has_separator = strchr (text, '/') ? 1 : 0;
 
-    if (!match_case) {
-        q->match_case = has_uppercase ? true : false;
-    }
     if (fs_str_is_regex (text) && enable_regex) {
         FsearchQueryHighlightToken *token = fsearch_query_highlight_token_new ();
+
+        bool has_uppercase = fs_str_utf8_has_upper (text);
+        if (!match_case && auto_match_case) {
+            q->match_case = has_uppercase ? true : false;
+        }
         token->regex = g_regex_new (text, !q->match_case ? G_REGEX_CASELESS : 0, 0, NULL);
         token->query = g_strdup (text);
         token->query_len = strlen (text);
@@ -197,6 +206,9 @@ fsearch_query_highlight_new (const char *text, bool enable_regex, bool match_cas
     }
     else {
         gchar *tmp = g_strdup (text);
+//        if (!match_case) {
+//            utf8lwr (tmp);
+//        }
         // remove leading/trailing whitespace
         g_strstrip (tmp);
 
@@ -212,7 +224,13 @@ fsearch_query_highlight_new (const char *text, bool enable_regex, bool match_cas
             assert (token != NULL);
 
             gchar *query_escaped = g_regex_escape_string (queries[i], -1);
-            token->regex = g_regex_new (query_escaped, !q->match_case ? G_REGEX_CASELESS : 0, 0, NULL);
+
+            bool has_uppercase = fs_str_utf8_has_upper (query_escaped);
+            bool query_match_case = false;
+            if (!match_case && auto_match_case) {
+                query_match_case = has_uppercase ? true : false;
+            }
+            token->regex = g_regex_new (query_escaped, !query_match_case? G_REGEX_CASELESS : 0, 0, NULL);
             g_free (query_escaped);
             query_escaped = NULL;
 

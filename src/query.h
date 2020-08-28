@@ -45,6 +45,7 @@ typedef struct
     GList *token;
 
     bool auto_search_in_path;
+    bool auto_match_case;
     bool search_in_path;
     bool has_separator;
     bool match_case;
@@ -59,13 +60,16 @@ typedef struct
     uint32_t max_results;
 
     bool match_case;
+    bool auto_match_case;
     bool enable_regex;
-    bool auto_search_in_path;
     bool search_in_path;
+    bool auto_search_in_path;
     bool pass_on_empty_query;
 
     void (*callback)(void *);
     void *callback_data;
+    void (*callback_cancelled)(void *);
+    void *callback_cancelled_data;
 } FsearchQuery;
 
 FsearchQuery *
@@ -74,8 +78,11 @@ fsearch_query_new (const char *query,
                    FsearchFilter filter,
                    void (*callback)(void *),
                    void *callback_data,
+                   void (*callback_cancelled)(void *),
+                   void *callback_cancelled_data,
                    uint32_t max_results,
                    bool match_case,
+                   bool auto_match_case,
                    bool enable_regex,
                    bool auto_search_in_path,
                    bool search_in_path,
@@ -91,6 +98,7 @@ FsearchQueryHighlight *
 fsearch_query_highlight_new (const char *text,
                               bool enable_regex,
                               bool match_case,
+                              bool auto_match_case,
                               bool auto_search_in_path,
                               bool search_in_path);
 
