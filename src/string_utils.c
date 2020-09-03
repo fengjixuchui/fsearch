@@ -17,6 +17,7 @@
    */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <ctype.h>
 #include <assert.h>
 #include <glib.h>
@@ -36,6 +37,30 @@ fs_str_is_empty (const char *str)
         str++;
     }
     return true;
+}
+
+bool
+fs_str_is_utf8 (const char *str)
+{
+    char *down = g_utf8_strdown (str, -1);
+    char *up = g_utf8_strup (str, -1);
+
+    assert (down != NULL);
+    assert (up != NULL);
+
+    size_t str_len = strlen (str);
+    size_t up_len = strlen (up);
+    size_t down_len = strlen (down);
+
+    g_free (down);
+    g_free (up);
+    down = NULL;
+    up = NULL;
+
+    if (str_len != up_len || str_len != down_len) {
+        return true;
+    }
+    return false;
 }
 
 int
@@ -100,5 +125,130 @@ fs_str_copy (char *dest, char *end, const char *src)
     }
     *ptr = '\0';
     return ptr;
+}
+
+static bool
+is_nul (char p)
+{
+    return p == '\0' ? true : false;
+}
+
+static char *
+consume_space (char *str, bool *eos)
+{
+    while (true) {
+        if (is_nul (*str)) {
+            *eos = true;
+            return str;
+        }
+        if (*str == ' ') {
+            str++;
+            continue;
+        }
+        *eos = false;
+        return str;
+    }
+}
+
+static char *
+consume_quotation_mark (char *str, char **dest, bool *eos)
+{
+    char *d = *dest;
+
+    while (true) {
+        if (is_nul (*str)) {
+            *eos = true;
+            *dest = d;
+            return str;
+        }
+        if (*str == '"') {
+            *eos = false;
+            *dest = d;
+            return str + 1;
+        }
+        if (*str == '\\') {
+            if (is_nul (*(str + 1))) {
+                *eos = true;
+                *dest = d;
+                return str + 1;
+            }
+            str++;
+        }
+        *d = *str;
+        d++;
+        str++;
+    }
+
+    *dest = d;
+    return str;
+}
+
+static char *
+consume_escape (char *str, char **dest, bool *eos)
+{
+    char *d = *dest;
+    if (is_nul (*str)) {
+        *eos = true;
+        return str;
+    }
+
+    *d = *str;
+    d++;
+
+    *dest = d;
+    return str + 1;
+}
+
+char **
+fs_str_split (char *str)
+{
+    if (!str) {
+        return NULL;
+    }
+
+    GPtrArray *new = g_ptr_array_new ();
+    // Duplicate input string to make sure destination is large enough
+    char *dest = g_strdup (str);
+    char *p = str;
+    char *d = dest;
+    bool eos = false;
+    while (!eos) {
+        switch (*p) {
+            case '\0':
+                eos = true;
+                break;
+            case '\\':
+                p = consume_escape (p+1, &d, &eos);
+                break;
+            case '"':
+                p = consume_quotation_mark (p+1, &d, &eos);
+                break;
+            case ' ':
+                // split at space
+                *d = '\0';
+                d = dest;
+                if (strlen (dest) > 0) {
+                    g_ptr_array_add (new, g_strdup (dest));
+                }
+                p = consume_space (p+1, &eos);
+                break;
+            default:
+                *d = *p;
+                d++;
+                p++;
+                break;
+        }
+    }
+    *d = '\0';
+    if (strlen (dest) > 0) {
+        g_ptr_array_add (new, g_strdup (dest));
+    }
+
+    // make sure last element is NULL
+    g_ptr_array_add (new, NULL);
+
+    g_free (dest);
+
+    return (char **)g_ptr_array_free (new, FALSE);
 }
 

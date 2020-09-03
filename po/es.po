@@ -8,9 +8,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FSearch 0.1\n"
 "Report-Msgid-Bugs-To: christian.boxdoerfer@posteo.de\n"
-"POT-Creation-Date: 2020-08-20 12:20+0200\n"
-"PO-Revision-Date: 2020-04-06 23:36+0000\n"
-"Last-Translator: Arturo <arturo34martinez@hotmail.com>\n"
+"POT-Creation-Date: 2020-09-01 16:56+0200\n"
+"PO-Revision-Date: 2020-08-30 15:59+0000\n"
+"Last-Translator: Christian Boxdörfer <christian.boxdoerfer@posteo.de>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/fsearch/"
 "translations/es/>\n"
 "Language: es\n"
@@ -18,41 +18,40 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.0-dev\n"
+"X-Generator: Weblate 4.2.1-dev\n"
 
-#: src/fsearch_window.c:106 src/fsearch_window.c:395 src/fsearch_window.c:854
+#: src/fsearch_window.c:106 src/fsearch_window.c:408 src/fsearch_window.c:875
 #, c-format
 msgid "%'d Items"
 msgstr "%'d elementos"
 
-#: src/fsearch_window.c:641 src/fsearch_window_actions.c:454
+#: src/fsearch_window.c:662 src/fsearch_window_actions.c:454
 msgid "Failed to open file"
 msgstr "No pudo abrirse el archivo"
 
-#: src/fsearch_window.c:642 src/fsearch_window_actions.c:455
+#: src/fsearch_window.c:663 src/fsearch_window_actions.c:455
 msgid "Do you want to keep the window open?"
 msgstr "¿Desea mantener la ventana abierta?"
 
-#: src/fsearch_window.c:860
+#: src/fsearch_window.c:881
 msgid "Last Updated: %Y-%m-%d %H:%M"
 msgstr "Última actualización: %d.%m.%Y, %H:%M"
 
-#: src/fsearch_window.c:874 src/overlay.ui:143
+#: src/fsearch_window.c:895 src/overlay.ui:143
 #, c-format
 msgid "Loading Database…"
 msgstr "Cargando base de datos…"
 
-#: src/fsearch_window.c:889 src/overlay.ui:213 src/fsearch.glade:1090
+#: src/fsearch_window.c:910 src/overlay.ui:213 src/fsearch.glade:1090
 #, fuzzy, c-format
-#| msgid "Updating Database..."
 msgid "Updating Database…"
 msgstr "Actualizando base de datos…"
 
-#: src/fsearch_window.c:1077
+#: src/fsearch_window.c:1098
 msgid "Background tasks are active."
 msgstr ""
 
-#: src/fsearch_window.c:1079
+#: src/fsearch_window.c:1100
 msgid ""
 "Closing the window isn't possible right now.\n"
 "Please wait a moment and then try again."
@@ -79,19 +78,19 @@ msgstr "Fecha de modificación"
 msgid "Type"
 msgstr "Tipo"
 
-#: src/fsearch.c:191
+#: src/fsearch.c:186
 msgid "Show version information"
 msgstr "Mostrar información de la versión"
 
-#: src/fsearch.c:198
+#: src/fsearch.c:193
 msgid "Update the database"
 msgstr "Actualizar base de datos"
 
-#: src/fsearch.c:410
+#: src/fsearch.c:405
 msgid "translator-credits"
 msgstr ""
 
-#: src/fsearch.c:411
+#: src/fsearch.c:406
 msgid "A search utility focusing on performance and advanced features"
 msgstr ""
 "Herramienta de búsqueda centrada en la velocidad y con prestaciones avanzadas"
@@ -108,7 +107,6 @@ msgstr "Abrir archivo(s)"
 
 #: src/fsearch_window_actions.c:167
 #, fuzzy, c-format
-#| msgid "Do you really want to remove"
 msgid "Do you really want to remove %d file(s)?"
 msgstr "¿En verdad quiere eliminar"
 
@@ -122,7 +120,6 @@ msgstr "Enviando archivos a la papelera…"
 
 #: src/fsearch_preferences_widgets.c:223 src/fsearch_preferences_widgets.c:257
 #, fuzzy
-#| msgid "Enable RegEx"
 msgid "Enable"
 msgstr "Activar expresiones regulares"
 
@@ -182,7 +179,6 @@ msgstr ""
 
 #: src/overlay.ui:173
 #, fuzzy
-#| msgid "This may take a while."
 msgid "This won't take long."
 msgstr "Esto puede demorar un rato."
 
@@ -252,7 +248,6 @@ msgstr ""
 
 #: src/preferences.ui:274
 #, fuzzy
-#| msgid "Behaviour after successfully opening a file"
 msgid "Behaviour after successfully opening a file:"
 msgstr "Comportamiento tras abrir un archivo con éxito"
 
@@ -288,63 +283,68 @@ msgstr "Buscar mientras escribe"
 msgid "Hide results when search is empty"
 msgstr "Ocultar resultados cuando la búsqueda esté vacía"
 
-#: src/preferences.ui:451 src/fsearch.glade:821
+#: src/preferences.ui:444
+#, fuzzy
+msgid "Match case when query contains at least one upper case character"
+msgstr "Buscar en la ruta cuando la consulta tenga separadores de ruta"
+
+#: src/preferences.ui:465 src/fsearch.glade:821
 msgid "Search"
 msgstr "Buscar"
 
-#: src/preferences.ui:470
+#: src/preferences.ui:484
 msgid "Update database on start"
 msgstr "Actualizar base de datos al inicio"
 
-#: src/preferences.ui:505 src/preferences.ui:609
+#: src/preferences.ui:519 src/preferences.ui:623
 msgid "Add…"
 msgstr ""
 
-#: src/preferences.ui:521 src/preferences.ui:625
+#: src/preferences.ui:535 src/preferences.ui:639
 msgid "Remove"
 msgstr "Quitar"
 
-#: src/preferences.ui:568
+#: src/preferences.ui:582
 msgid "Follow symbolic links"
 msgstr "Seguir enlaces simbólicos"
 
-#: src/preferences.ui:585
+#: src/preferences.ui:599
 msgid "Include"
 msgstr "Incluir"
 
-#: src/preferences.ui:672
+#: src/preferences.ui:686
 msgid "Exclude hidden files and folders"
 msgstr "Excluir archivos y carpetas ocultos"
 
-#: src/preferences.ui:693 src/preferences.ui:706
+#: src/preferences.ui:707 src/preferences.ui:720
 msgid "Supports wildcards. Multiple entries must be separated by ';'"
 msgstr "Admite comodines. Separe las entradas mediante «;»"
 
-#: src/preferences.ui:694
+#: src/preferences.ui:708
 msgid "Exclude files:"
 msgstr "Excluir archivos:"
 
-#: src/preferences.ui:707
+#: src/preferences.ui:721
 msgid "e.g. \".git;*.tmp\""
 msgstr "p. ej., «.git;*.tmp»"
 
-#: src/preferences.ui:731
+#: src/preferences.ui:745
 msgid "Exclude"
 msgstr "Excluir"
 
-#: src/preferences.ui:754
+#: src/preferences.ui:768
 msgid "Database"
 msgstr "Base de datos"
 
-#: src/preferences.ui:777
+#: src/preferences.ui:791
 msgid "Show warning dialogs when:"
 msgstr "Mostrar advertencias cuando:"
 
-#: src/preferences.ui:786
+#: src/preferences.ui:800
 msgid "file / folder failed to open"
 msgstr "No se pudo abrir archivo / carpeta"
 
-#: src/preferences.ui:807
+#: src/preferences.ui:821
 msgid "Dialogs"
 msgstr "Diálogos"
 
@@ -370,13 +370,11 @@ msgstr "Enviar a la papelera"
 
 #: src/fsearch.glade:173
 #, fuzzy
-#| msgid "New Window"
 msgid "New window"
 msgstr "Ventana nueva"
 
 #: src/fsearch.glade:188
 #, fuzzy
-#| msgid "Update Database"
 msgid "Update database"
 msgstr "Actualizar base de datos"
 
@@ -458,7 +456,6 @@ msgstr "Ay_uda"
 
 #: src/fsearch.glade:781
 #, fuzzy
-#| msgid "Search"
 msgid "Search…"
 msgstr "Buscar"
 
@@ -518,16 +515,16 @@ msgstr "EXPRESIONES REGULARES"
 msgid "FSearch"
 msgstr "FSearch"
 
-#: data/fsearch.desktop.in.in:7
+#: data/fsearch.desktop.in.in:6
 msgid "A file search application focusing on performance and advanced features"
 msgstr ""
 "Herramienta de búsqueda centrada en la velocidad y con prestaciones avanzadas"
 
-#: data/fsearch.desktop.in.in:12
+#: data/fsearch.desktop.in.in:7
 msgid "system-search"
-msgstr "sistema de búsqueda"
+msgstr "system-search"
 
-#: data/fsearch.desktop.in.in:16
+#: data/fsearch.desktop.in.in:11
 msgid ""
 "search;fsearch;files;folders;music;video;documents;find;tool;everything;"
 msgstr ""
