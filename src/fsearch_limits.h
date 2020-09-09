@@ -1,6 +1,6 @@
 /*
    FSearch - A fast file search utility
-   Copyright © 2016 Christian Boxdörfer
+   Copyright © 2020 Christian Boxdörfer
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,6 +21,6 @@
 #include <limits.h>
 
 #ifndef PATH_MAX
-#define	PATH_MAX 4096 /* max # of characters in a path name */
+#define PATH_MAX 4096 /* max # of characters in a path name */
 #endif
 

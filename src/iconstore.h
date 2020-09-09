@@ -1,6 +1,6 @@
 /*
    FSearch - A fast file search utility
-   Copyright © 2016 Christian Boxdörfer
+   Copyright © 2020 Christian Boxdörfer
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #include <gtk/gtk.h>
 
 GdkPixbuf *
-iconstore_get_pixbuf (GFileInfo * file_info);
+iconstore_get_pixbuf(GFileInfo *file_info);
 
 void
-iconstore_clear ();
+iconstore_clear();

@@ -1,6 +1,6 @@
 /*
    FSearch - A fast file search utility
-   Copyright © 2016 Christian Boxdörfer
+   Copyright © 2020 Christian Boxdörfer
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,29 +17,27 @@
    */
 
 #pragma once
-#include <unistd.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 int
-fs_str_is_regex (const char *str);
+fs_str_is_regex(const char *str);
 
 bool
-fs_str_is_empty (const char *str);
+fs_str_is_empty(const char *str);
 
 bool
-fs_str_has_upper (const char *str);
+fs_str_has_upper(const char *str);
 
 bool
-fs_str_utf8_has_upper (const char *str);
+fs_str_utf8_has_upper(const char *str);
 
 char *
-fs_str_copy (char *dest,
-             char *end,
-             const char *src);
+fs_str_copy(char *dest, char *end, const char *src);
 
 char **
-fs_str_split (char *str);
+fs_str_split(char *str);
 
 bool
-fs_str_is_utf8 (const char *str);
+fs_str_is_utf8(const char *str);
 

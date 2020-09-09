@@ -1,6 +1,6 @@
 /*
    FSearch - A fast file search utility
-   Copyright © 2018 Christian Boxdörfer
+   Copyright © 2020 Christian Boxdörfer
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@
    along with this program; if not, see <http://www.gnu.org/licenses/>.
    */
 
+#pragma once
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -23,4 +25,4 @@
 #include <gtk/gtk.h>
 
 void
-listview_popup_menu (GtkWidget *widget, GdkEventButton *event);
+listview_popup_menu(GtkWidget *widget, GdkEventButton *event);

@@ -1,6 +1,6 @@
 /*
    FSearch - A fast file search utility
-   Copyright © 2016 Christian Boxdörfer
+   Copyright © 2020 Christian Boxdörfer
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,14 +18,13 @@
 
 #pragma once
 
+#include <glib.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <glib.h>
 
 typedef struct _FsearchConfig FsearchConfig;
 
-struct _FsearchConfig
-{
+struct _FsearchConfig {
     // Search
     bool limit_results;
     bool hide_results_on_empty_search;
@@ -51,6 +50,7 @@ struct _FsearchConfig
     bool enable_dark_theme;
     bool enable_list_tooltips;
     bool restore_column_config;
+    bool restore_sort_order;
     bool double_click_path;
     uint32_t action_after_file_open;
     bool action_after_file_open_keyboard;
@@ -99,27 +99,26 @@ struct _FsearchConfig
     char **exclude_files;
 };
 
+bool
+config_make_dir(void);
 
 bool
-config_make_dir (void);
+config_load(FsearchConfig *config);
 
 bool
-config_load (FsearchConfig *config);
+config_load_default(FsearchConfig *config);
 
 bool
-config_load_default (FsearchConfig *config);
-
-bool
-config_save (FsearchConfig *config);
+config_save(FsearchConfig *config);
 
 void
-config_build_dir (char *path, size_t len);
+config_build_dir(char *path, size_t len);
 
 bool
-config_cmp (FsearchConfig *c1, FsearchConfig *c2);
+config_cmp(FsearchConfig *c1, FsearchConfig *c2);
 
 FsearchConfig *
-config_copy (FsearchConfig *config);
+config_copy(FsearchConfig *config);
 
 void
-config_free (FsearchConfig *config);
+config_free(FsearchConfig *config);

@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: christian.boxdoerfer@posteo.de\n"
-"POT-Creation-Date: 2020-09-01 16:56+0200\n"
-"PO-Revision-Date: 2020-09-02 15:36+0000\n"
+"POT-Creation-Date: 2020-09-05 17:41+0200\n"
+"PO-Revision-Date: 2020-09-09 07:36+0000\n"
 "Last-Translator: Oğuz Ersen <oguzersen@protonmail.com>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/fsearch/"
 "translations/tr/>\n"
@@ -20,38 +20,38 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Weblate 4.3-dev\n"
 
-#: src/fsearch_window.c:106 src/fsearch_window.c:408 src/fsearch_window.c:875
+#: src/fsearch_window.c:104 src/fsearch_window.c:366 src/fsearch_window.c:788
 #, c-format
 msgid "%'d Items"
 msgstr "%'d Öğe"
 
-#: src/fsearch_window.c:662 src/fsearch_window_actions.c:454
+#: src/fsearch_window.c:608 src/fsearch_window_actions.c:411
 msgid "Failed to open file"
 msgstr "Dosya açılamadı"
 
-#: src/fsearch_window.c:663 src/fsearch_window_actions.c:455
+#: src/fsearch_window.c:609 src/fsearch_window_actions.c:412
 msgid "Do you want to keep the window open?"
 msgstr "Pencereyi açık tutmak istiyor musunuz?"
 
-#: src/fsearch_window.c:881
+#: src/fsearch_window.c:794
 msgid "Last Updated: %Y-%m-%d %H:%M"
 msgstr "Son Güncelleme Tarihi: %Y-%m-%d %H:%M"
 
-#: src/fsearch_window.c:895 src/overlay.ui:143
+#: src/fsearch_window.c:807 src/overlay.ui:143
 #, c-format
 msgid "Loading Database…"
 msgstr "Veri Tabanı Yükleniyor…"
 
-#: src/fsearch_window.c:910 src/overlay.ui:213 src/fsearch.glade:1090
+#: src/fsearch_window.c:821 src/overlay.ui:213 src/fsearch.glade:1090
 #, c-format
 msgid "Updating Database…"
 msgstr "Veri Tabanı Güncelleniyor…"
 
-#: src/fsearch_window.c:1098
+#: src/fsearch_window.c:975
 msgid "Background tasks are active."
 msgstr "Arka plan görevleri etkin."
 
-#: src/fsearch_window.c:1100
+#: src/fsearch_window.c:978
 msgid ""
 "Closing the window isn't possible right now.\n"
 "Please wait a moment and then try again."
@@ -59,70 +59,70 @@ msgstr ""
 "Şu anda pencereyi kapatmak mümkün değil.\n"
 "Lütfen biraz bekleyip tekrar deneyin."
 
-#: src/listview.c:221 src/menus.ui:80
+#: src/listview.c:186 src/menus.ui:80
 msgid "Name"
 msgstr "İsim"
 
-#: src/listview.c:254 src/fsearch_preferences_widgets.c:224
-#: src/fsearch_preferences_widgets.c:258 src/menus.ui:84
+#: src/listview.c:211 src/fsearch_preferences_widgets.c:205
+#: src/fsearch_preferences_widgets.c:246 src/menus.ui:84
 msgid "Path"
 msgstr "Yol"
 
-#: src/listview.c:288 src/menus.ui:92
+#: src/listview.c:235 src/menus.ui:92
 msgid "Size"
 msgstr "Boyut"
 
-#: src/listview.c:320 src/menus.ui:96
+#: src/listview.c:253 src/menus.ui:96
 msgid "Date Modified"
 msgstr "Düzenlenme Tarihi"
 
-#: src/listview.c:349 src/menus.ui:88
+#: src/listview.c:270 src/menus.ui:88
 msgid "Type"
 msgstr "Tür"
 
-#: src/fsearch.c:186
+#: src/fsearch.c:173
 msgid "Show version information"
 msgstr "Sürüm bilgilerini göster"
 
-#: src/fsearch.c:193
+#: src/fsearch.c:180
 msgid "Update the database"
 msgstr "Veri tabanını güncelle"
 
-#: src/fsearch.c:405
+#: src/fsearch.c:358
 msgid "translator-credits"
 msgstr "Oğuz Ersen"
 
-#: src/fsearch.c:406
+#: src/fsearch.c:360
 msgid "A search utility focusing on performance and advanced features"
 msgstr "Performansa ve gelişmiş özelliklere odaklanan bir arama programı"
 
-#: src/fsearch_window_actions.c:85
+#: src/fsearch_window_actions.c:78
 #, c-format
 msgid "Do you really want to open %d file(s)?"
 msgstr "%d dosyayı gerçekten açmak istiyor musunuz?"
 
-#: src/fsearch_window_actions.c:87
+#: src/fsearch_window_actions.c:80
 msgid "Opening Files…"
 msgstr "Dosyalar Açılıyor…"
 
-#: src/fsearch_window_actions.c:167
+#: src/fsearch_window_actions.c:154
 #, c-format
 msgid "Do you really want to remove %d file(s)?"
 msgstr "%d dosyayı gerçekten kaldırmak istiyor musunuz?"
 
-#: src/fsearch_window_actions.c:171
+#: src/fsearch_window_actions.c:160
 msgid "Deleting files…"
 msgstr "Dosyalar siliniyor…"
 
-#: src/fsearch_window_actions.c:171
+#: src/fsearch_window_actions.c:160
 msgid "Moving files to trash…"
 msgstr "Dosyalar çöp sepetine taşınıyor…"
 
-#: src/fsearch_preferences_widgets.c:223 src/fsearch_preferences_widgets.c:257
-msgid "Enable"
-msgstr "Etkinleştir"
+#: src/fsearch_preferences_widgets.c:201 src/fsearch_preferences_widgets.c:242
+msgid "Active"
+msgstr "Etkin"
 
-#: src/fsearch_preferences_widgets.c:225
+#: src/fsearch_preferences_widgets.c:208
 msgid "Update"
 msgstr "Güncelle"
 
@@ -260,89 +260,93 @@ msgstr "Kapat"
 msgid "Show highlighted search terms"
 msgstr "Vurgulanan arama terimlerini göster"
 
-#: src/preferences.ui:356
+#: src/preferences.ui:322
+msgid "Remember sort order"
+msgstr "Sıralama düzenini hatırla"
+
+#: src/preferences.ui:372
 msgid "Interface"
 msgstr "Arayüz"
 
-#: src/preferences.ui:374
+#: src/preferences.ui:390
 msgid "Limit number of results:"
 msgstr "Sonuç sayısının sınırı:"
 
-#: src/preferences.ui:402
+#: src/preferences.ui:418
 msgid "Search in path when query contains path separators"
 msgstr "Sorgu dosya yolu içerdiği zaman dosya yollarında arama yap"
 
-#: src/preferences.ui:416
+#: src/preferences.ui:432
 msgid "Search as you type"
 msgstr "Yazarken ara"
 
-#: src/preferences.ui:430
+#: src/preferences.ui:446
 msgid "Hide results when search is empty"
 msgstr "Eğer sonuç boşsa sonuçları gizle"
 
-#: src/preferences.ui:444
+#: src/preferences.ui:460
 msgid "Match case when query contains at least one upper case character"
 msgstr ""
 "Sorgu en az bir büyük harf karakteri içerdiğinde küçük/büyük harf durumunu "
 "eşleştir"
 
-#: src/preferences.ui:465 src/fsearch.glade:821
+#: src/preferences.ui:481 src/fsearch.glade:821
 msgid "Search"
 msgstr "Ara"
 
-#: src/preferences.ui:484
+#: src/preferences.ui:500
 msgid "Update database on start"
 msgstr "Başlangıçta veri tabanını güncelle"
 
-#: src/preferences.ui:519 src/preferences.ui:623
+#: src/preferences.ui:535 src/preferences.ui:639
 msgid "Add…"
 msgstr "Ekle…"
 
-#: src/preferences.ui:535 src/preferences.ui:639
+#: src/preferences.ui:551 src/preferences.ui:655
 msgid "Remove"
 msgstr "Sil"
 
-#: src/preferences.ui:582
+#: src/preferences.ui:598
 msgid "Follow symbolic links"
 msgstr "Sembolik Linkleri Takip Et"
 
-#: src/preferences.ui:599
+#: src/preferences.ui:615
 msgid "Include"
 msgstr "Aktar"
 
-#: src/preferences.ui:686
+#: src/preferences.ui:702
 msgid "Exclude hidden files and folders"
 msgstr "Gizli dosya ve klasörleri hariç tut"
 
-#: src/preferences.ui:707 src/preferences.ui:720
+#: src/preferences.ui:723 src/preferences.ui:736
 msgid "Supports wildcards. Multiple entries must be separated by ';'"
 msgstr "Joker karakterleri destekler. Çoklu girdiler ';' ile ayrılmalıdır"
 
-#: src/preferences.ui:708
+#: src/preferences.ui:724
 msgid "Exclude files:"
 msgstr "Hariç tutulan dosyalar:"
 
-#: src/preferences.ui:721
+#: src/preferences.ui:737
 msgid "e.g. \".git;*.tmp\""
 msgstr "örn: \".git,*.tmp\""
 
-#: src/preferences.ui:745
+#: src/preferences.ui:761
 msgid "Exclude"
 msgstr "Hariç Tut"
 
-#: src/preferences.ui:768
+#: src/preferences.ui:784
 msgid "Database"
 msgstr "Veri tabanı"
 
-#: src/preferences.ui:791
+#: src/preferences.ui:807
 msgid "Show warning dialogs when:"
 msgstr "Şu durumlarda uyarı iletişim kutularını göster:"
 
-#: src/preferences.ui:800
+#: src/preferences.ui:816
 msgid "file / folder failed to open"
 msgstr "dosya / klasör açılamadı"
 
-#: src/preferences.ui:821
+#: src/preferences.ui:837
 msgid "Dialogs"
 msgstr "İletişim kutuları"
 
@@ -524,6 +528,9 @@ msgid ""
 "search;fsearch;files;folders;music;video;documents;find;tool;everything;"
 msgstr ""
 "arama;fsearch;dosyalar;klasörler;müzik;video;belgeler;bul;araç;her şey;"
+
+#~ msgid "Enable"
+#~ msgstr "Etkinleştir"
 
 #~ msgid "Loading Database..."
 #~ msgstr "Veri Tabanı Yükleniyor..."

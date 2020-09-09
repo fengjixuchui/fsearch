@@ -1,6 +1,6 @@
 /*
    FSearch - A fast file search utility
-   Copyright © 2016 Christian Boxdörfer
+   Copyright © 2020 Christian Boxdörfer
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,60 +18,58 @@
 
 #pragma once
 
-#include <glib.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include "array.h"
 #include "btree.h"
+#include <glib.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 typedef struct _FsearchDatabase FsearchDatabase;
 
 typedef struct _FsearchDatabaseNode FsearchDatabaseNode;
 
 bool
-db_make_data_dir (void);
+db_make_data_dir(void);
 
 void
-db_build_data_dir (char *path, size_t len);
+db_build_data_dir(char *path, size_t len);
 
 bool
-db_load_from_file (FsearchDatabase *db,
-                   const char *path,
-                   void (*callback)(const char *));
+db_load_from_file(FsearchDatabase *db, const char *path, void (*callback)(const char *));
 
 bool
-db_scan (FsearchDatabase *db, void (*callback)(const char *));
+db_scan(FsearchDatabase *db, void (*callback)(const char *));
 
 void
-db_ref (FsearchDatabase *db);
+db_ref(FsearchDatabase *db);
 
 void
-db_unref (FsearchDatabase *db);
+db_unref(FsearchDatabase *db);
 
 FsearchDatabase *
-db_new (GList *includes, GList *excludes, char **exclude_files, bool exclude_hidden);
+db_new(GList *includes, GList *excludes, char **exclude_files, bool exclude_hidden);
 
 bool
-db_save_locations (FsearchDatabase *db);
+db_save_locations(FsearchDatabase *db);
 
 time_t
-db_get_timestamp (FsearchDatabase *db);
+db_get_timestamp(FsearchDatabase *db);
 
 uint32_t
-db_get_num_entries (FsearchDatabase *db);
+db_get_num_entries(FsearchDatabase *db);
 
 void
-db_unlock (FsearchDatabase *db);
+db_unlock(FsearchDatabase *db);
 
 void
-db_lock (FsearchDatabase *db);
+db_lock(FsearchDatabase *db);
 
 bool
-db_try_lock (FsearchDatabase *db);
+db_try_lock(FsearchDatabase *db);
 
 DynamicArray *
-db_get_entries (FsearchDatabase *db);
+db_get_entries(FsearchDatabase *db);
 
 void
-db_sort (FsearchDatabase *db);
+db_sort(FsearchDatabase *db);
 
