@@ -81,7 +81,7 @@ run_file_chooser_dialog(GtkButton *button) {
     gint res = gtk_dialog_run(GTK_DIALOG(dialog));
 #else
     GtkFileChooserNative *dialog = gtk_file_chooser_native_new(
-        _("Select folder"), GTK_WINDOW(window), action, _("_Cancel"), _("_Select"));
+        _("Select folder"), GTK_WINDOW(window), action, _("_Select"), _("_Cancel"));
 
     gint res = gtk_native_dialog_run(GTK_NATIVE_DIALOG(dialog));
 #endif
@@ -147,8 +147,8 @@ preferences_ui_launch(FsearchConfig *config,
     GtkWidget *dialog = GTK_WIDGET(gtk_builder_get_object(builder, "FsearchPreferencesWindow"));
     gtk_window_set_transient_for(GTK_WINDOW(dialog), window);
 
-    gtk_dialog_add_button(GTK_DIALOG(dialog), "_OK", GTK_RESPONSE_OK);
     gtk_dialog_add_button(GTK_DIALOG(dialog), "_Cancel", GTK_RESPONSE_CANCEL);
+    gtk_dialog_add_button(GTK_DIALOG(dialog), "_OK", GTK_RESPONSE_OK);
 
     // Interface page
     GtkToggleButton *enable_dark_theme_button =
@@ -202,6 +202,9 @@ preferences_ui_launch(FsearchConfig *config,
 
     GtkToggleButton *action_after_file_open_mouse = toggle_button_get(
         builder, "action_after_file_open_mouse", pref.config->action_after_file_open_mouse);
+
+    GtkToggleButton *show_indexing_status = toggle_button_get(
+        builder, "show_indexing_status_button", pref.config->show_indexing_status);
 
     // Search page
     GtkToggleButton *auto_search_in_path_button =
@@ -303,6 +306,7 @@ preferences_ui_launch(FsearchConfig *config,
             gtk_toggle_button_get_active(action_after_file_open_keyboard);
         pref.config->action_after_file_open_mouse =
             gtk_toggle_button_get_active(action_after_file_open_mouse);
+        pref.config->show_indexing_status = gtk_toggle_button_get_active(show_indexing_status);
         // Dialogs
         pref.config->show_dialog_failed_opening =
             gtk_toggle_button_get_active(show_dialog_failed_opening);

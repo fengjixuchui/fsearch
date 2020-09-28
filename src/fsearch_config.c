@@ -35,7 +35,6 @@ const char *config_folder_name = "fsearch";
 void
 config_build_dir(char *path, size_t len) {
     g_assert(path != NULL);
-    g_assert(len >= 0);
 
     const gchar *xdg_conf_dir = g_get_user_config_dir();
     snprintf(path, len, "%s/%s", xdg_conf_dir, config_folder_name);
@@ -45,7 +44,6 @@ config_build_dir(char *path, size_t len) {
 static void
 config_build_path(char *path, size_t len) {
     g_assert(path != NULL);
-    g_assert(len >= 0);
 
     const gchar *xdg_conf_dir = g_get_user_config_dir();
     snprintf(path, len, "%s/%s/%s", xdg_conf_dir, config_folder_name, config_file_name);
@@ -212,6 +210,8 @@ config_load(FsearchConfig *config) {
             config_load_boolean(key_file, "Interface", "action_after_file_open_keyboard", false);
         config->action_after_file_open_mouse =
             config_load_boolean(key_file, "Interface", "action_after_file_open_mouse", false);
+        config->show_indexing_status =
+            config_load_boolean(key_file, "Interface", "show_indexing_status", true);
 
         // Warning Dialogs
         config->show_dialog_failed_opening =
@@ -279,7 +279,7 @@ config_load(FsearchConfig *config) {
 
         // Database
         config->update_database_on_launch =
-            config_load_boolean(key_file, "Database", "update_database_on_launch", false);
+            config_load_boolean(key_file, "Database", "update_database_on_launch", true);
         config->exclude_hidden_items =
             config_load_boolean(key_file, "Database", "exclude_hidden_files_and_folders", false);
         config->follow_symlinks =
@@ -339,6 +339,7 @@ config_load_default(FsearchConfig *config) {
     config->action_after_file_open = 0;
     config->action_after_file_open_keyboard = false;
     config->action_after_file_open_mouse = false;
+    config->show_indexing_status = true;
 
     // Columns
     config->show_listview_icons = true;
@@ -371,12 +372,14 @@ config_load_default(FsearchConfig *config) {
     config->window_height = 600;
 
     // Database
-    config->update_database_on_launch = false;
+    config->update_database_on_launch = true;
     config->exclude_hidden_items = false;
     config->follow_symlinks = false;
 
     // Locations
     config->locations = NULL;
+    FsearchIncludePath *fs_path = fsearch_include_path_new(g_get_home_dir(), true, true, 0, 0);
+    config->locations = g_list_append(config->locations, fs_path);
     config->exclude_locations = NULL;
 
     return true;
@@ -472,6 +475,8 @@ config_save(FsearchConfig *config) {
                            "Interface",
                            "action_after_file_open_mouse",
                            config->action_after_file_open_mouse);
+    g_key_file_set_boolean(
+        key_file, "Interface", "show_indexing_status", config->show_indexing_status);
 
     // Warning Dialogs
     g_key_file_set_boolean(
