@@ -33,31 +33,17 @@
 #include "fsearch_timer.h"
 #include "fsearch_window.h"
 #include "string_utils.h"
-
-#define OVECCOUNT 3
+#include "token.h"
 
 struct _DatabaseSearchEntry {
     BTreeNode *node;
     uint32_t pos;
 };
 
-typedef struct search_token_s {
-    char *text;
-    size_t text_len;
-
-    uint32_t has_separator;
-    uint32_t (*search_func)(const char *, const char *, void *data);
-
-    pcre *regex;
-    pcre_extra *regex_study;
-    int ovector[OVECCOUNT];
-} search_token_t;
-
 typedef struct search_context_s {
     FsearchQuery *query;
     BTreeNode **results;
-    search_token_t **token;
-    uint32_t num_token;
+    bool *terminate;
     uint32_t num_results;
     uint32_t start_pos;
     uint32_t end_pos;
@@ -75,6 +61,16 @@ db_search_entry_new(BTreeNode *node, uint32_t pos);
 static void
 db_search_entry_free(DatabaseSearchEntry *entry);
 
+static void
+db_search_notify_cancelled(FsearchQuery *query) {
+    if (query->db) {
+        db_unref(query->db);
+    }
+    if (query->callback_cancelled) {
+        query->callback_cancelled(query->callback_cancelled_data);
+    }
+}
+
 static gpointer
 db_search_thread(gpointer user_data) {
     DatabaseSearch *search = user_data;
@@ -91,6 +87,7 @@ db_search_thread(gpointer user_data) {
                 break;
             }
             search->query_ctx = NULL;
+            search->search_terminate = false;
             g_mutex_unlock(&search->query_mutex);
             // if query is empty string we are done here
             DatabaseSearchResult *result = NULL;
@@ -106,20 +103,40 @@ db_search_thread(gpointer user_data) {
                 result = db_search(search, query);
             }
             g_mutex_lock(&search->query_mutex);
-            result->cb_data = query->callback_data;
-            result->db = query->db;
-            query->callback(result);
+            if (result) {
+                result->cb_data = query->callback_data;
+                result->db = query->db;
+                query->callback(result);
+            }
+            else {
+                db_search_notify_cancelled(query);
+            }
             fsearch_query_free(query);
+            query = NULL;
         }
     }
     g_mutex_unlock(&search->query_mutex);
     return NULL;
 }
 
+static void
+search_thread_context_free(search_thread_context_t *ctx) {
+    if (!ctx) {
+        return;
+    }
+    if (ctx->results) {
+        g_free(ctx->results);
+        ctx->results = NULL;
+    }
+    if (ctx) {
+        g_free(ctx);
+        ctx = NULL;
+    }
+}
+
 static search_thread_context_t *
 search_thread_context_new(FsearchQuery *query,
-                          search_token_t **token,
-                          uint32_t num_token,
+                          bool *terminate,
                           uint32_t start_pos,
                           uint32_t end_pos) {
     search_thread_context_t *ctx = calloc(1, sizeof(search_thread_context_t));
@@ -127,8 +144,7 @@ search_thread_context_new(FsearchQuery *query,
     assert(end_pos >= start_pos);
 
     ctx->query = query;
-    ctx->token = token;
-    ctx->num_token = num_token;
+    ctx->terminate = terminate;
     ctx->results = calloc(end_pos - start_pos + 1, sizeof(BTreeNode *));
     assert(ctx->results != NULL);
 
@@ -139,18 +155,38 @@ search_thread_context_new(FsearchQuery *query,
 }
 
 static inline bool
-filter_node(BTreeNode *node, FsearchFilter filter) {
-    if (filter == FSEARCH_FILTER_NONE) {
+filter_node(BTreeNode *node, FsearchQuery *query, const char *haystack) {
+    if (!query->filter) {
+        return true;
+    }
+    if (query->filter->type == FSEARCH_FILTER_NONE && query->filter->query == NULL) {
         return true;
     }
     bool is_dir = node->is_dir;
-    if (filter == FSEARCH_FILTER_FILES && !is_dir) {
-        return true;
+    if (query->filter->type == FSEARCH_FILTER_FILES && is_dir) {
+        return false;
     }
-    if (filter == FSEARCH_FILTER_FOLDERS && is_dir) {
-        return true;
+    if (query->filter->type == FSEARCH_FILTER_FOLDERS && !is_dir) {
+        return false;
     }
-    return false;
+    if (query->filter_token) {
+        uint32_t num_found = 0;
+        while (true) {
+            if (num_found == query->num_filter_token) {
+                return true;
+            }
+            FsearchToken *t = query->filter_token[num_found++];
+            if (!t) {
+                return false;
+            }
+
+            if (!t->search_func(haystack, t->text, t)) {
+                return false;
+            }
+        }
+        return false;
+    }
+    return true;
 }
 
 static void *
@@ -159,15 +195,15 @@ db_search_worker(void *user_data) {
     assert(ctx != NULL);
     assert(ctx->results != NULL);
 
+    FsearchQuery *query = ctx->query;
     const uint32_t start = ctx->start_pos;
     const uint32_t end = ctx->end_pos;
-    const uint32_t max_results = ctx->query->max_results;
-    const uint32_t num_token = ctx->num_token;
-    const FsearchFilter filter = ctx->query->filter;
-    search_token_t **token = ctx->token;
-    const uint32_t search_in_path = ctx->query->search_in_path;
-    const uint32_t auto_search_in_path = ctx->query->auto_search_in_path;
-    DynamicArray *entries = db_get_entries(ctx->query->db);
+    const uint32_t max_results = query->max_results;
+    const uint32_t num_token = query->num_token;
+    FsearchToken **token = query->token;
+    const uint32_t search_in_path = query->flags.search_in_path;
+    const uint32_t auto_search_in_path = query->flags.auto_search_in_path;
+    DynamicArray *entries = db_get_entries(query->db);
     BTreeNode **results = ctx->results;
 
     if (!entries) {
@@ -179,6 +215,9 @@ db_search_worker(void *user_data) {
     uint32_t num_results = 0;
     char full_path[PATH_MAX] = "";
     for (uint32_t i = start; i <= end; i++) {
+        if (*ctx->terminate) {
+            return NULL;
+        }
         if (max_results && num_results == max_results) {
             break;
         }
@@ -186,15 +225,16 @@ db_search_worker(void *user_data) {
         if (!node) {
             continue;
         }
-        if (!filter_node(node, filter)) {
-            continue;
-        }
-
         const char *haystack_path = NULL;
         const char *haystack_name = node->name;
-        if (search_in_path) {
+        if (search_in_path || query->filter->search_in_path) {
             btree_node_get_path_full(node, full_path, sizeof(full_path));
             haystack_path = full_path;
+        }
+
+        if (!filter_node(
+                node, query, query->filter->search_in_path ? haystack_path : haystack_name)) {
+            continue;
         }
 
         uint32_t num_found = 0;
@@ -204,7 +244,7 @@ db_search_worker(void *user_data) {
                 num_results++;
                 break;
             }
-            search_token_t *t = token[num_found++];
+            FsearchToken *t = token[num_found++];
             if (!t) {
                 break;
             }
@@ -227,137 +267,6 @@ db_search_worker(void *user_data) {
     }
     ctx->num_results = num_results;
     return NULL;
-}
-
-static uint32_t
-search_regex(const char *haystack, const char *needle, void *data) {
-    search_token_t *t = data;
-    size_t haystack_len = strlen(haystack);
-    return pcre_exec(
-               t->regex, t->regex_study, haystack, haystack_len, 0, 0, t->ovector, OVECCOUNT) >= 0
-               ? 1
-               : 0;
-}
-
-static uint32_t
-search_wildcard_icase(const char *haystack, const char *needle, void *data) {
-    return !fnmatch(needle, haystack, FNM_CASEFOLD) ? 1 : 0;
-}
-
-static uint32_t
-search_wildcard(const char *haystack, const char *needle, void *data) {
-    return !fnmatch(needle, haystack, 0) ? 1 : 0;
-}
-
-static uint32_t
-search_normal_icase_u8(const char *haystack, const char *needle, void *data) {
-    // TODO: make this faster
-    char *haystack_normalized = g_utf8_normalize(haystack, -1, G_NORMALIZE_DEFAULT);
-    char *haystack_down = g_utf8_strdown(haystack_normalized, -1);
-    uint32_t res = strstr(haystack_down, needle) ? 1 : 0;
-    g_free(haystack_down);
-    g_free(haystack_normalized);
-    return res;
-}
-
-static uint32_t
-search_normal_icase(const char *haystack, const char *needle, void *data) {
-    return strcasestr(haystack, needle) ? 1 : 0;
-}
-
-static uint32_t
-search_normal(const char *haystack, const char *needle, void *data) {
-    return strstr(haystack, needle) ? 1 : 0;
-}
-
-static void
-search_token_free(void *data) {
-    search_token_t *token = data;
-    assert(token != NULL);
-
-    if (token->text != NULL) {
-        g_free(token->text);
-        token->text = NULL;
-    }
-    if (token->regex_study != NULL) {
-        pcre_free_study(token->regex_study);
-        token->regex_study = NULL;
-    }
-    if (token->regex != NULL) {
-        pcre_free(token->regex);
-        token->regex = NULL;
-    }
-    g_free(token);
-    token = NULL;
-}
-
-static search_token_t *
-search_token_new(const char *text, bool match_case, bool auto_match_case, bool is_regex) {
-    search_token_t *new = calloc(1, sizeof(search_token_t));
-    assert(new != NULL);
-
-    new->text_len = strlen(text);
-    new->has_separator = strchr(text, '/') ? 1 : 0;
-
-    if (auto_match_case && fs_str_utf8_has_upper(text)) {
-        match_case = true;
-    }
-
-    char *normalized = g_utf8_normalize(text, -1, G_NORMALIZE_DEFAULT);
-    new->text = match_case ? g_strdup(text) : g_utf8_strdown(normalized, -1);
-    g_free(normalized);
-    normalized = NULL;
-
-    if (is_regex) {
-        const char *error;
-        int erroffset;
-        new->regex = pcre_compile(text, match_case ? 0 : PCRE_CASELESS, &error, &erroffset, NULL);
-        new->regex_study = pcre_study(new->regex, PCRE_STUDY_JIT_COMPILE, &error);
-        new->search_func = search_regex;
-    }
-    else if (strchr(text, '*') || strchr(text, '?')) {
-        new->search_func = match_case ? search_wildcard : search_wildcard_icase;
-    }
-    else {
-        if (match_case) {
-            new->search_func = search_normal;
-        }
-        else {
-            new->search_func = fs_str_is_utf8(text) ? search_normal_icase_u8 : search_normal_icase;
-        }
-    }
-    return new;
-}
-
-static search_token_t **
-db_search_build_token(FsearchQuery *q) {
-    assert(q != NULL);
-    assert(q->text != NULL);
-
-    // check if regex characters are present
-    const bool is_reg = fs_str_is_regex(q->text);
-    if (is_reg && q->enable_regex) {
-        search_token_t **token = calloc(2, sizeof(search_token_t *));
-        token[0] = search_token_new(q->text, q->match_case, q->auto_match_case, true);
-        token[1] = NULL;
-        return token;
-    }
-
-    // whitespace is regarded as AND so split query there in multiple token
-    char **query_split = fs_str_split(q->text);
-    assert(query_split != NULL);
-
-    uint32_t tmp_token_len = g_strv_length(query_split);
-    search_token_t **token = calloc(tmp_token_len + 1, sizeof(search_token_t *));
-    for (uint32_t i = 0; i < tmp_token_len; i++) {
-        trace("[search] token %d: %s\n", i, query_split[i]);
-        token[i] = search_token_new(query_split[i], q->match_case, q->auto_match_case, false);
-    }
-
-    g_strfreev(query_split);
-    query_split = NULL;
-
-    return token;
 }
 
 static DatabaseSearchResult *
@@ -385,13 +294,22 @@ db_search_empty(FsearchQuery *query) {
     uint32_t num_folders = 0;
     uint32_t num_files = 0;
     uint32_t pos = 0;
+
+    char full_path[PATH_MAX] = "";
     for (uint32_t i = 0; pos < num_results && i < num_entries; ++i) {
         BTreeNode *node = darray_get_item(entries, i);
         if (!node) {
             continue;
         }
 
-        if (!filter_node(node, query->filter)) {
+        const char *haystack_path = NULL;
+        const char *haystack_name = node->name;
+        if (query->filter->search_in_path) {
+            btree_node_get_path_full(node, full_path, sizeof(full_path));
+            haystack_path = full_path;
+        }
+        if (!filter_node(
+                node, query, query->filter->search_in_path ? haystack_path : haystack_name)) {
             continue;
         }
         if (node->is_dir) {
@@ -424,23 +342,21 @@ db_search(DatabaseSearch *search, FsearchQuery *q) {
 
     const uint32_t max_results = q->max_results;
     const bool limit_results = max_results ? true : false;
-    uint32_t num_token = 0;
     uint32_t start_pos = 0;
     uint32_t end_pos = num_items_per_thread - 1;
 
-    search_token_t **token = db_search_build_token(q);
-    while (token[num_token]) {
-        num_token++;
-    }
-    if (!token) {
+    if (!q->token) {
         return db_search_result_new(NULL, 0, 0);
     }
 
     GTimer *timer = fsearch_timer_start();
     GList *threads = fsearch_thread_pool_get_threads(search->pool);
     for (uint32_t i = 0; i < num_threads; i++) {
-        thread_data[i] = search_thread_context_new(
-            q, token, num_token, start_pos, i == num_threads - 1 ? num_entries - 1 : end_pos);
+        thread_data[i] =
+            search_thread_context_new(q,
+                                      &search->search_terminate,
+                                      start_pos,
+                                      i == num_threads - 1 ? num_entries - 1 : end_pos);
 
         start_pos = end_pos + 1;
         end_pos += num_items_per_thread;
@@ -453,6 +369,15 @@ db_search(DatabaseSearch *search, FsearchQuery *q) {
     while (threads) {
         fsearch_thread_pool_wait_for_thread(search->pool, threads);
         threads = threads->next;
+    }
+    if (search->search_terminate) {
+        for (uint32_t i = 0; i < num_threads; i++) {
+            search_thread_context_t *ctx = thread_data[i];
+            search_thread_context_free(ctx);
+        }
+        fsearch_timer_stop(timer, "[search] search aborted after %.2f ms\n");
+        timer = NULL;
+        return NULL;
     }
 
     // get total number of entries found
@@ -490,22 +415,8 @@ db_search(DatabaseSearch *search, FsearchQuery *q) {
             g_ptr_array_add(results, entry);
             pos++;
         }
-        if (ctx->results) {
-            g_free(ctx->results);
-            ctx->results = NULL;
-        }
-        if (ctx) {
-            g_free(ctx);
-            ctx = NULL;
-        }
+        search_thread_context_free(ctx);
     }
-
-    for (uint32_t i = 0; i < num_token; ++i) {
-        search_token_free(token[i]);
-        token[i] = NULL;
-    }
-    free(token);
-    token = NULL;
 
     fsearch_timer_stop(timer, "[search] search finished in %.2f ms\n");
     timer = NULL;
@@ -645,14 +556,12 @@ void
 db_search_queue(DatabaseSearch *search, FsearchQuery *query) {
     g_mutex_lock(&search->query_mutex);
     if (search->query_ctx) {
-        if (search->query_ctx->db) {
-            db_unref(search->query_ctx->db);
-        }
-        search->query_ctx->callback_cancelled(search->query_ctx->callback_cancelled_data);
+        db_search_notify_cancelled(search->query_ctx);
         fsearch_query_free(search->query_ctx);
         search->query_ctx = NULL;
     }
     search->query_ctx = query;
+    search->search_terminate = true;
     g_mutex_unlock(&search->query_mutex);
     g_cond_signal(&search->search_thread_start_cond);
 }

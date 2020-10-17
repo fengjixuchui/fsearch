@@ -512,10 +512,9 @@ static void
 fsearch_window_action_show_filter(GSimpleAction *action, GVariant *variant, gpointer user_data) {
     FsearchApplicationWindow *self = user_data;
     g_simple_action_set_state(action, variant);
-    GtkWidget *filter = GTK_WIDGET(fsearch_application_window_get_filter_combobox(self));
-    gtk_widget_set_visible(filter, g_variant_get_boolean(variant));
     FsearchConfig *config = fsearch_application_get_config(FSEARCH_APPLICATION_DEFAULT);
     config->show_filter = g_variant_get_boolean(variant);
+    fsearch_window_apply_search_revealer_config(self);
 }
 
 static void
@@ -524,32 +523,18 @@ fsearch_window_action_show_search_button(GSimpleAction *action,
                                          gpointer user_data) {
     FsearchApplicationWindow *self = user_data;
     g_simple_action_set_state(action, variant);
-    GtkWidget *button = GTK_WIDGET(fsearch_application_window_get_search_button(self));
-    gtk_widget_set_visible(button, g_variant_get_boolean(variant));
     FsearchConfig *config = fsearch_application_get_config(FSEARCH_APPLICATION_DEFAULT);
     config->show_search_button = g_variant_get_boolean(variant);
+    fsearch_window_apply_search_revealer_config(self);
 }
 
 static void
 fsearch_window_action_show_statusbar(GSimpleAction *action, GVariant *variant, gpointer user_data) {
     FsearchApplicationWindow *self = user_data;
     g_simple_action_set_state(action, variant);
-    GtkWidget *statusbar = GTK_WIDGET(fsearch_application_window_get_statusbar(self));
-    gtk_widget_set_visible(statusbar, g_variant_get_boolean(variant));
     FsearchConfig *config = fsearch_application_get_config(FSEARCH_APPLICATION_DEFAULT);
     config->show_statusbar = g_variant_get_boolean(variant);
-}
-
-static void
-fsearch_window_action_show_menubar(GSimpleAction *action, GVariant *variant, gpointer user_data) {
-    FsearchApplicationWindow *self = user_data;
-    g_simple_action_set_state(action, variant);
-    GtkWidget *menubar = GTK_WIDGET(fsearch_application_window_get_menubar(self));
-    GtkWidget *app_menu = GTK_WIDGET(fsearch_application_window_get_app_menu(self));
-    gtk_widget_set_visible(menubar, g_variant_get_boolean(variant));
-    gtk_widget_set_visible(app_menu, !g_variant_get_boolean(variant));
-    FsearchConfig *config = fsearch_application_get_config(FSEARCH_APPLICATION_DEFAULT);
-    config->show_menubar = g_variant_get_boolean(variant);
+    fsearch_window_apply_statusbar_revealer_config(self);
 }
 
 static void
@@ -560,12 +545,7 @@ fsearch_window_action_search_in_path(GSimpleAction *action, GVariant *variant, g
     bool search_in_path_old = config->search_in_path;
     config->search_in_path = g_variant_get_boolean(variant);
     GtkWidget *revealer = fsearch_application_window_get_search_in_path_revealer(self);
-    if (config->search_in_path) {
-        gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), TRUE);
-    }
-    else {
-        gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), FALSE);
-    }
+    gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), config->search_in_path);
     if (search_in_path_old != config->search_in_path) {
         g_idle_add((GSourceFunc)fsearch_application_window_update_search, self);
     }
@@ -579,12 +559,7 @@ fsearch_window_action_search_mode(GSimpleAction *action, GVariant *variant, gpoi
     bool enable_regex_old = config->enable_regex;
     config->enable_regex = g_variant_get_boolean(variant);
     GtkWidget *revealer = fsearch_application_window_get_search_mode_revealer(self);
-    if (config->enable_regex) {
-        gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), TRUE);
-    }
-    else {
-        gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), FALSE);
-    }
+    gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), config->enable_regex);
     if (enable_regex_old != config->enable_regex) {
         g_idle_add((GSourceFunc)fsearch_application_window_update_search, self);
     }
@@ -598,12 +573,7 @@ fsearch_window_action_match_case(GSimpleAction *action, GVariant *variant, gpoin
     bool match_case_old = config->match_case;
     config->match_case = g_variant_get_boolean(variant);
     GtkWidget *revealer = fsearch_application_window_get_match_case_revealer(self);
-    if (config->match_case) {
-        gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), TRUE);
-    }
-    else {
-        gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), FALSE);
-    }
+    gtk_revealer_set_reveal_child(GTK_REVEALER(revealer), config->match_case);
     if (match_case_old != config->match_case) {
         g_idle_add((GSourceFunc)fsearch_application_window_update_search, self);
     }
@@ -754,7 +724,6 @@ static GActionEntry FsearchWindowActions[] = {
     //{ "update_database",     fsearch_window_action_update_database },
     // View
     {"show_statusbar", action_toggle_state_cb, NULL, "true", fsearch_window_action_show_statusbar},
-    {"show_menubar", action_toggle_state_cb, NULL, "true", fsearch_window_action_show_menubar},
     {"show_filter", action_toggle_state_cb, NULL, "true", fsearch_window_action_show_filter},
     {"show_search_button",
      action_toggle_state_cb,
@@ -799,7 +768,6 @@ fsearch_window_actions_update(FsearchApplicationWindow *self) {
     action_set_enabled(group, "toggle_focus", TRUE);
     action_set_enabled(group, "hide_window", TRUE);
     action_set_enabled(group, "update_database", TRUE);
-    action_set_enabled(group, "show_menubar", TRUE);
     action_set_enabled(group, "show_statusbar", TRUE);
     action_set_enabled(group, "show_filter", TRUE);
     action_set_enabled(group, "show_search_button", TRUE);
@@ -810,7 +778,6 @@ fsearch_window_actions_update(FsearchApplicationWindow *self) {
     action_set_enabled(group, "show_modified_column", TRUE);
 
     FsearchConfig *config = fsearch_application_get_config(FSEARCH_APPLICATION_DEFAULT);
-    action_set_active_bool(group, "show_menubar", config->show_menubar);
     action_set_active_bool(group, "show_statusbar", config->show_statusbar);
     action_set_active_bool(group, "show_filter", config->show_filter);
     action_set_active_bool(group, "show_search_button", config->show_search_button);
