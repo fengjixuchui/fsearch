@@ -130,6 +130,17 @@ toggle_button_get(GtkBuilder *builder, const char *name, bool val) {
     return button;
 }
 
+static void
+action_after_file_open_changed(GtkComboBox *widget, gpointer user_data) {
+    int active = gtk_combo_box_get_active(widget);
+    if (active != ACTION_AFTER_OPEN_NOTHING) {
+        gtk_widget_set_sensitive(GTK_WIDGET(user_data), TRUE);
+    }
+    else {
+        gtk_widget_set_sensitive(GTK_WIDGET(user_data), FALSE);
+    }
+}
+
 FsearchConfig *
 preferences_ui_launch(FsearchConfig *config,
                       GtkWindow *window,
@@ -188,9 +199,23 @@ preferences_ui_launch(FsearchConfig *config,
     GtkToggleButton *show_base_2_units =
         toggle_button_get(builder, "show_base_2_units", pref.config->show_base_2_units);
 
+    GtkBox *action_after_file_open_box =
+        GTK_BOX(builder_get_object(builder, "action_after_file_open_box"));
     GtkComboBox *action_after_file_open =
         GTK_COMBO_BOX(builder_get_object(builder, "action_after_file_open"));
     gtk_combo_box_set_active(action_after_file_open, pref.config->action_after_file_open);
+
+    g_signal_connect(action_after_file_open,
+                     "changed",
+                     G_CALLBACK(action_after_file_open_changed),
+                     action_after_file_open_box);
+
+    if (pref.config->action_after_file_open != ACTION_AFTER_OPEN_NOTHING) {
+        gtk_widget_set_sensitive(GTK_WIDGET(action_after_file_open_box), TRUE);
+    }
+    else {
+        gtk_widget_set_sensitive(GTK_WIDGET(action_after_file_open_box), FALSE);
+    }
 
     GtkToggleButton *action_after_file_open_keyboard = toggle_button_get(
         builder, "action_after_file_open_keyboard", pref.config->action_after_file_open_keyboard);
@@ -250,9 +275,6 @@ preferences_ui_launch(FsearchConfig *config,
 
     GtkTreeSelection *sel = gtk_tree_view_get_selection(include_list);
     g_signal_connect(sel, "changed", G_CALLBACK(on_list_selection_changed), include_remove_button);
-
-    GtkToggleButton *follow_symlinks_button =
-        toggle_button_get(builder, "follow_symlinks_button", pref.config->follow_symlinks);
 
     // Exclude model
     // pref.exclude_model = create_exclude_tree_model (&pref,
@@ -319,7 +341,6 @@ preferences_ui_launch(FsearchConfig *config,
         pref.config->show_listview_icons = gtk_toggle_button_get_active(show_icons_button);
         pref.config->exclude_hidden_items =
             gtk_toggle_button_get_active(exclude_hidden_items_button);
-        pref.config->follow_symlinks = gtk_toggle_button_get_active(follow_symlinks_button);
 
         if (config->auto_search_in_path != pref.config->auto_search_in_path ||
             config->auto_match_case != pref.config->auto_match_case ||
@@ -335,8 +356,7 @@ preferences_ui_launch(FsearchConfig *config,
             pref.update_list = true;
         }
 
-        if (config->exclude_hidden_items != pref.config->exclude_hidden_items ||
-            config->follow_symlinks != pref.config->follow_symlinks) {
+        if (config->exclude_hidden_items != pref.config->exclude_hidden_items) {
             pref.update_db = true;
         }
 
