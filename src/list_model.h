@@ -30,8 +30,7 @@
 #define LIST_MODEL_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), LIST_MODEL_TYPE, ListModelClass))
 #define IS_LIST_MODEL(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), LIST_MODEL_TYPE))
 #define IS_LIST_MODEL_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), LIST_MODEL_TYPE))
-#define LIST_MODEL_GET_CLASS(obj)                                                                  \
-    (G_TYPE_INSTANCE_GET_CLASS((obj), LIST_MODEL_TYPE, ListModelClass))
+#define LIST_MODEL_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), LIST_MODEL_TYPE, ListModelClass))
 
 /* The data columns that we export via the tree model interface */
 
@@ -66,6 +65,9 @@ typedef struct _ListModelClass ListModelClass;
  *             crucial that 'parent' is the first member of the
  *             structure.                                          */
 
+typedef struct ListModelCachedValue {
+} ListModelCachedValue;
+
 struct _ListModel {
     GObject parent; /* this MUST be the first member */
 
@@ -75,6 +77,11 @@ struct _ListModel {
     /*   speed things up a bit in our get_value implementation    */
     gint n_columns;
     GType column_types[LIST_MODEL_N_COLUMNS];
+
+    // Cached values for more efficient get_value calls
+    BTreeNode *node_cached;
+    GString *node_path;
+    GString *parent_path;
 
     gint sort_id;
     GtkSortType sort_order;

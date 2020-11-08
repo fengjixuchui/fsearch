@@ -85,14 +85,10 @@ static gboolean
 list_model_iter_parent(GtkTreeModel *tree_model, GtkTreeIter *iter, GtkTreeIter *child);
 
 static gboolean
-list_model_sortable_get_sort_column_id(GtkTreeSortable *sortable,
-                                       gint *sort_col_id,
-                                       GtkSortType *order);
+list_model_sortable_get_sort_column_id(GtkTreeSortable *sortable, gint *sort_col_id, GtkSortType *order);
 
 static void
-list_model_sortable_set_sort_column_id(GtkTreeSortable *sortable,
-                                       gint sort_col_id,
-                                       GtkSortType order);
+list_model_sortable_set_sort_column_id(GtkTreeSortable *sortable, gint sort_col_id, GtkSortType order);
 
 static void
 list_model_sortable_set_sort_func(GtkTreeSortable *sortable,
@@ -149,6 +145,14 @@ list_model_clear(ListModel *list_model) {
         g_ptr_array_free(list_model->results, TRUE);
         list_model->results = NULL;
     }
+    if (list_model->node_path) {
+        g_string_free(list_model->node_path, TRUE);
+        list_model->node_path = NULL;
+    }
+    if (list_model->parent_path) {
+        g_string_free(list_model->parent_path, TRUE);
+        list_model->parent_path = NULL;
+    }
 }
 
 /*****************************************************************************
@@ -176,19 +180,17 @@ list_model_get_type(void) {
                                                   0, /* n_preallocs */
                                                   (GInstanceInitFunc)list_model_init,
                                                   NULL};
-        static const GInterfaceInfo tree_model_info = {
-            (GInterfaceInitFunc)list_model_tree_model_init, NULL, NULL};
-        static const GInterfaceInfo tree_model_sortable_info = {
-            (GInterfaceInitFunc)list_model_model_sortable_init, NULL, NULL};
+        static const GInterfaceInfo tree_model_info = {(GInterfaceInitFunc)list_model_tree_model_init, NULL, NULL};
+        static const GInterfaceInfo tree_model_sortable_info = {(GInterfaceInitFunc)list_model_model_sortable_init,
+                                                                NULL,
+                                                                NULL};
 
         /* First register the new derived type with the GObject type system */
-        list_model_type =
-            g_type_register_static(G_TYPE_OBJECT, "ListModel", &list_model_info, (GTypeFlags)0);
+        list_model_type = g_type_register_static(G_TYPE_OBJECT, "ListModel", &list_model_info, (GTypeFlags)0);
 
         /* Now register our GtkTreeModel interface with the type system */
         g_type_add_interface_static(list_model_type, GTK_TYPE_TREE_MODEL, &tree_model_info);
-        g_type_add_interface_static(
-            list_model_type, GTK_TYPE_TREE_SORTABLE, &tree_model_sortable_info);
+        g_type_add_interface_static(list_model_type, GTK_TYPE_TREE_SORTABLE, &tree_model_sortable_info);
     }
 
     return list_model_type;
@@ -269,6 +271,8 @@ list_model_init(ListModel *list_model) {
     g_assert(LIST_MODEL_N_COLUMNS == 7);
 
     list_model->results = NULL;
+    list_model->node_path = g_string_new(NULL);
+    list_model->parent_path = g_string_new(NULL);
 
     list_model->sort_id = SORT_ID_NONE;
     list_model->sort_order = GTK_SORT_ASCENDING;
@@ -418,19 +422,31 @@ list_model_get_value(GtkTreeModel *tree_model, GtkTreeIter *iter, gint column, G
     g_return_if_fail(record != NULL);
 
     ListModel *list_model = LIST_MODEL(tree_model);
+
     if (db_search_entry_get_pos(record) >= list_model->results->len)
         g_return_if_reached();
 
-    gchar path[PATH_MAX] = "";
-    gchar output[100] = "";
-    gchar *mime_type = NULL;
-    gchar *formatted_size = NULL;
-    GFileInfo *file_info = NULL;
-    GFile *g_file = NULL;
+    char output[100] = "";
 
     BTreeNode *node = db_search_entry_get_node(record);
-    const char *name = node->name;
-    gchar node_path[PATH_MAX] = "";
+
+    GString *node_path = list_model->node_path;
+    GString *parent_path = list_model->parent_path;
+    if (!list_model->node_cached || node->parent != list_model->node_cached->parent) {
+        g_string_erase(parent_path, 0, -1);
+        char path[PATH_MAX] = "";
+        btree_node_get_path(node, path, sizeof(path));
+        g_string_append(parent_path, path);
+    }
+    if (node != list_model->node_cached) {
+        g_string_erase(node_path, 0, -1);
+        g_string_append(node_path, parent_path->str);
+        g_string_append_c(node_path, '/');
+        g_string_append(node_path, node->name);
+    }
+
+    list_model->node_cached = node;
+
     time_t mtime = node->mtime;
 
     g_value_init(value, list_model->column_types[column]);
@@ -439,35 +455,38 @@ list_model_get_value(GtkTreeModel *tree_model, GtkTreeIter *iter, gint column, G
         g_value_set_pointer(value, record);
         break;
 
-    case LIST_MODEL_COL_ICON:
-        btree_node_get_path(node, node_path, sizeof(node_path));
-
-        if (0 <= snprintf(path, sizeof(path), "%s/%s", node_path, name)) {
-            g_file = g_file_new_for_path(path);
-            file_info = g_file_query_info(g_file, "standard::icon", 0, NULL, NULL);
-            GIcon *icon = NULL;
+    case LIST_MODEL_COL_ICON: {
+        GIcon *icon = NULL;
+        GFile *g_file = g_file_new_for_path(node_path->str);
+        if (g_file) {
+            GFileInfo *file_info = g_file_query_info(g_file, "standard::icon", 0, NULL, NULL);
             if (file_info) {
                 icon = g_file_info_get_icon(file_info);
                 if (icon) {
                     g_value_set_object(value, icon);
                 }
+                g_object_unref(file_info);
+                file_info = NULL;
             }
-            else {
-                icon = g_icon_new_for_string("image-missing", NULL);
-                if (icon) {
-                    g_value_take_object(value, icon);
-                }
+            g_object_unref(g_file);
+            g_file = NULL;
+        }
+
+        if (!icon) {
+            icon = g_icon_new_for_string("image-missing", NULL);
+            if (icon) {
+                g_value_take_object(value, icon);
+                icon = NULL;
             }
         }
-        break;
+    } break;
 
     case LIST_MODEL_COL_NAME:
-        g_value_take_string(value, g_filename_display_name(name));
+        g_value_take_string(value, g_filename_display_name(node->name));
         break;
 
     case LIST_MODEL_COL_PATH:
-        btree_node_get_path(node, node_path, sizeof(node_path));
-        g_value_take_string(value, g_filename_display_name(node_path));
+        g_value_take_string(value, g_filename_display_name(parent_path->str));
         break;
 
     case LIST_MODEL_COL_SIZE:
@@ -483,23 +502,21 @@ list_model_get_value(GtkTreeModel *tree_model, GtkTreeIter *iter, gint column, G
         }
         else {
             FsearchConfig *config = fsearch_application_get_config(FSEARCH_APPLICATION_DEFAULT);
+            char *formatted_size = NULL;
             if (config->show_base_2_units) {
                 formatted_size = g_format_size_full(node->size, G_FORMAT_SIZE_IEC_UNITS);
             }
             else {
                 formatted_size = g_format_size_full(node->size, G_FORMAT_SIZE_DEFAULT);
             }
-            g_value_set_string(value, formatted_size);
+            g_value_take_string(value, formatted_size);
         }
         break;
 
-    case LIST_MODEL_COL_TYPE:
-        btree_node_get_path(node, node_path, sizeof(node_path));
-        if (0 <= snprintf(path, sizeof(path), "%s/%s", node_path, name)) {
-            mime_type = get_file_type(record, path);
-            g_value_set_string(value, mime_type);
-        }
-        break;
+    case LIST_MODEL_COL_TYPE: {
+        char *mime_type = get_file_type(record, node_path->str);
+        g_value_take_string(value, mime_type);
+    } break;
 
     case LIST_MODEL_COL_CHANGED:
         strftime(output,
@@ -508,21 +525,6 @@ list_model_get_value(GtkTreeModel *tree_model, GtkTreeIter *iter, gint column, G
                  localtime(&mtime));
         g_value_set_static_string(value, output);
         break;
-    }
-
-    if (g_file) {
-        g_object_unref(g_file);
-    }
-    if (file_info) {
-        g_object_unref(file_info);
-    }
-    if (formatted_size) {
-        g_free(formatted_size);
-        formatted_size = NULL;
-    }
-    if (mime_type) {
-        g_free(mime_type);
-        mime_type = NULL;
     }
 }
 
@@ -647,10 +649,7 @@ list_model_iter_n_children(GtkTreeModel *tree_model, GtkTreeIter *iter) {
  *****************************************************************************/
 
 static gboolean
-list_model_iter_nth_child(GtkTreeModel *tree_model,
-                          GtkTreeIter *iter,
-                          GtkTreeIter *parent,
-                          gint n) {
+list_model_iter_nth_child(GtkTreeModel *tree_model, GtkTreeIter *iter, GtkTreeIter *parent, gint n) {
     g_return_val_if_fail(IS_LIST_MODEL(tree_model), FALSE);
 
     /* a list has only top-level rows */
@@ -727,9 +726,7 @@ list_model_new(void) {
  *****************************************************************************/
 
 static gboolean
-list_model_sortable_get_sort_column_id(GtkTreeSortable *sortable,
-                                       gint *sort_col_id,
-                                       GtkSortType *order) {
+list_model_sortable_get_sort_column_id(GtkTreeSortable *sortable, gint *sort_col_id, GtkSortType *order) {
     ListModel *list_model;
 
     g_return_val_if_fail(sortable != NULL, FALSE);
@@ -747,9 +744,7 @@ list_model_sortable_get_sort_column_id(GtkTreeSortable *sortable,
 }
 
 static void
-list_model_sortable_set_sort_column_id(GtkTreeSortable *sortable,
-                                       gint sort_col_id,
-                                       GtkSortType order) {
+list_model_sortable_set_sort_column_id(GtkTreeSortable *sortable, gint sort_col_id, GtkSortType order) {
     ListModel *list_model;
 
     g_return_if_fail(sortable != NULL);
@@ -939,9 +934,7 @@ list_model_compare_records(gint sort_id, DatabaseSearchEntry *a, DatabaseSearchE
 }
 
 static gint
-list_model_qsort_compare_func(DatabaseSearchEntry **a,
-                              DatabaseSearchEntry **b,
-                              ListModel *list_model) {
+list_model_qsort_compare_func(DatabaseSearchEntry **a, DatabaseSearchEntry **b, ListModel *list_model) {
     g_assert((a) && (b) && (list_model));
 
     gint ret = list_model_compare_records(list_model->sort_id, *a, *b);
@@ -1027,8 +1020,7 @@ list_model_sort(ListModel *list_model) {
     trace("[list_model] sort started\n");
     GTimer *timer = fsearch_timer_start();
     /* resort */
-    g_ptr_array_sort_with_data(
-        list_model->results, (GCompareDataFunc)list_model_qsort_compare_func, list_model);
+    g_ptr_array_sort_with_data(list_model->results, (GCompareDataFunc)list_model_qsort_compare_func, list_model);
 
     list_model_apply_sort(list_model);
 
@@ -1046,6 +1038,7 @@ list_model_update_sort(ListModel *list_model) {
 
 void
 list_model_set_results(ListModel *list, GPtrArray *results) {
+    list->node_cached = NULL;
     list->results = results;
 }
 
