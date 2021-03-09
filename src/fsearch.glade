@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.38.1 
+<!-- Generated with glade 3.38.2 
 
 FSearch - 
 Copyright (C) Christian Boxdörfer
@@ -455,6 +455,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
                         <property name="label" translatable="yes">Index:</property>
                         <property name="single-line-mode">True</property>
                         <property name="track-visited-links">False</property>
+                        <style>
+                          <class name="dim-label"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>
@@ -468,6 +471,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
                         <property name="ellipsize">middle</property>
                         <property name="single-line-mode">True</property>
                         <property name="track-visited-links">False</property>
+                        <property name="xalign">0</property>
+                        <style>
+                          <class name="dim-label"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">False</property>

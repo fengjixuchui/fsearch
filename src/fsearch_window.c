@@ -99,8 +99,49 @@ struct _FsearchApplicationWindow {
     GMutex mutex;
 };
 
+typedef enum _FsearchOverlay {
+    NO_SEARCH_RESULTS_OVERLAY,
+    NO_SEARCH_QUERY_OVERLAY,
+    NO_DATABASE_OVERLAY,
+    DATABASE_UPDATING_OVERLAY,
+    DATABASE_LOADING_OVERLAY,
+} FsearchOverlay;
+
 static gboolean
 perform_search(FsearchApplicationWindow *win);
+
+static void
+show_overlay(FsearchApplicationWindow *win, FsearchOverlay overlay);
+
+static void
+database_load_started(FsearchApplicationWindow *win) {
+    gtk_stack_set_visible_child(GTK_STACK(win->statusbar_database_stack), win->statusbar_database_updating_box);
+    gtk_spinner_start(GTK_SPINNER(win->statusbar_database_updating_spinner));
+    gchar db_text[100] = "";
+    snprintf(db_text, sizeof(db_text), _("Loading Database…"));
+    gtk_label_set_text(GTK_LABEL(win->statusbar_database_updating_label), db_text);
+
+    show_overlay(win, DATABASE_LOADING_OVERLAY);
+}
+
+static void
+database_scan_started(FsearchApplicationWindow *win) {
+    FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
+    FsearchConfig *config = fsearch_application_get_config(app);
+
+    gtk_widget_hide(win->popover_update_db);
+    gtk_widget_show(win->popover_cancel_update_db);
+
+    if (config->show_indexing_status) {
+        gtk_widget_show(win->statusbar_scan_label);
+        gtk_widget_show(win->statusbar_scan_status_label);
+    }
+    gtk_stack_set_visible_child(GTK_STACK(win->statusbar_database_stack), win->statusbar_database_updating_box);
+    gtk_spinner_start(GTK_SPINNER(win->statusbar_database_updating_spinner));
+    gchar db_text[100] = "";
+    snprintf(db_text, sizeof(db_text), _("Updating Database…"));
+    gtk_label_set_text(GTK_LABEL(win->statusbar_database_updating_label), db_text);
+}
 
 static void
 init_statusbar(FsearchApplicationWindow *self) {
@@ -315,15 +356,30 @@ fsearch_application_window_constructed(GObject *object) {
 
     G_OBJECT_CLASS(fsearch_application_window_parent_class)->constructed(object);
 
+    FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
+
     self->num_searches_active = 0;
     self->search = NULL;
-    self->search = db_search_new(fsearch_application_get_thread_pool(FSEARCH_APPLICATION_DEFAULT));
+    self->search = db_search_new(fsearch_application_get_thread_pool(app));
     g_mutex_init(&self->mutex);
     fsearch_window_apply_config(self);
 
     fsearch_apply_menubar_config(self);
 
     init_statusbar(self);
+
+    switch (fsearch_application_get_db_state(app)) {
+    case FSEARCH_DATABASE_STATE_LOADING:
+        database_load_started(self);
+        break;
+    case FSEARCH_DATABASE_STATE_SCANNING:
+        database_scan_started(self);
+        break;
+    case FSEARCH_DATABASE_STATE_IDLE:
+        break;
+    default:
+        break;
+    }
 }
 
 static void
@@ -339,14 +395,6 @@ fsearch_application_window_finalize(GObject *object) {
 
     G_OBJECT_CLASS(fsearch_application_window_parent_class)->finalize(object);
 }
-
-typedef enum _FsearchOverlay {
-    NO_SEARCH_RESULTS_OVERLAY,
-    NO_SEARCH_QUERY_OVERLAY,
-    NO_DATABASE_OVERLAY,
-    DATABASE_UPDATING_OVERLAY,
-    DATABASE_LOADING_OVERLAY,
-} FsearchOverlay;
 
 static void
 hide_overlays(FsearchApplicationWindow *win) {
@@ -463,8 +511,14 @@ update_model_cb(gpointer user_data) {
     }
 
     apply_model_to_list(win);
+
     gchar sb_text[100] = "";
-    snprintf(sb_text, sizeof(sb_text), _("%'d Items"), num_results);
+    if (config->limit_results && num_results == config->num_results) {
+        snprintf(sb_text, sizeof(sb_text), _("≥%'d Items"), num_results);
+    }
+    else {
+        snprintf(sb_text, sizeof(sb_text), _("%'d Items"), num_results);
+    }
     statusbar_update(win, sb_text);
 
     if (text[0] == '\0' && config->hide_results_on_empty_search) {
@@ -933,34 +987,15 @@ database_load_started_cb(gpointer data, gpointer user_data) {
     FsearchApplicationWindow *win = (FsearchApplicationWindow *)user_data;
     g_assert(FSEARCH_WINDOW_IS_WINDOW(win));
 
-    gtk_stack_set_visible_child(GTK_STACK(win->statusbar_database_stack), win->statusbar_database_updating_box);
-    gtk_spinner_start(GTK_SPINNER(win->statusbar_database_updating_spinner));
-    gchar db_text[100] = "";
-    snprintf(db_text, sizeof(db_text), _("Loading Database…"));
-    gtk_label_set_text(GTK_LABEL(win->statusbar_database_updating_label), db_text);
-
-    show_overlay(win, DATABASE_LOADING_OVERLAY);
+    database_load_started(win);
 }
 
 static void
-database_update_started_cb(gpointer data, gpointer user_data) {
+database_scan_started_cb(gpointer data, gpointer user_data) {
     FsearchApplicationWindow *win = (FsearchApplicationWindow *)user_data;
     g_assert(FSEARCH_WINDOW_IS_WINDOW(win));
-    FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
-    FsearchConfig *config = fsearch_application_get_config(app);
 
-    gtk_widget_hide(win->popover_update_db);
-    gtk_widget_show(win->popover_cancel_update_db);
-
-    if (config->show_indexing_status) {
-        gtk_widget_show(win->statusbar_scan_label);
-        gtk_widget_show(win->statusbar_scan_status_label);
-    }
-    gtk_stack_set_visible_child(GTK_STACK(win->statusbar_database_stack), win->statusbar_database_updating_box);
-    gtk_spinner_start(GTK_SPINNER(win->statusbar_database_updating_spinner));
-    gchar db_text[100] = "";
-    snprintf(db_text, sizeof(db_text), _("Updating Database…"));
-    gtk_label_set_text(GTK_LABEL(win->statusbar_database_updating_label), db_text);
+    database_scan_started(win);
 }
 
 static void
@@ -980,11 +1015,7 @@ fsearch_application_window_init(FsearchApplicationWindow *self) {
     create_view_and_model(self);
 
     FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
-    g_signal_connect_object(app,
-                            "database-update-started",
-                            G_CALLBACK(database_update_started_cb),
-                            self,
-                            G_CONNECT_AFTER);
+    g_signal_connect_object(app, "database-scan-started", G_CALLBACK(database_scan_started_cb), self, G_CONNECT_AFTER);
     g_signal_connect_object(app,
                             "database-update-finished",
                             G_CALLBACK(database_update_finished_cb),
