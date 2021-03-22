@@ -20,14 +20,12 @@
 
 #include "array.h"
 #include "btree.h"
-#include "database.h"
 #include "fsearch_filter.h"
 #include "fsearch_thread_pool.h"
 #include "query.h"
 #include <stdint.h>
 
 typedef struct _DatabaseSearch DatabaseSearch;
-typedef struct _DatabaseSearchEntry DatabaseSearchEntry;
 
 // search modes
 enum {
@@ -35,27 +33,27 @@ enum {
     DB_SEARCH_MODE_REGEX = 1,
 };
 
+typedef struct _DatabaseSearchEntry {
+    BTreeNode *node;
+    uint32_t pos;
+} DatabaseSearchEntry;
+
 typedef struct _DatabaseSearchResult {
-    FsearchDatabase *db;
-    GPtrArray *results;
+    GArray *entries;
     void *cb_data;
     uint32_t num_folders;
     uint32_t num_files;
+
+    FsearchQuery *query;
 } DatabaseSearchResult;
 
 struct _DatabaseSearch {
-    GPtrArray *results;
     FsearchThreadPool *pool;
 
+    GAsyncQueue *search_queue;
     GThread *search_thread;
     bool search_terminate;
     bool search_thread_terminate;
-    GMutex query_mutex;
-    GCond search_thread_start_cond;
-
-    FsearchQuery *query_ctx;
-    uint32_t num_folders;
-    uint32_t num_files;
 };
 
 void
@@ -74,22 +72,7 @@ void
 db_search_entry_set_pos(DatabaseSearchEntry *entry, uint32_t pos);
 
 void
-db_search_results_clear(DatabaseSearch *search);
-
-uint32_t
-db_search_get_num_results(DatabaseSearch *search);
-
-uint32_t
-db_search_get_num_files(DatabaseSearch *search);
-
-uint32_t
-db_search_get_num_folders(DatabaseSearch *search);
-
-GPtrArray *
-db_search_get_results(DatabaseSearch *search);
-
-void
-db_search_remove_entry(DatabaseSearch *search, DatabaseSearchEntry *entry);
+db_search_result_free(DatabaseSearchResult *result);
 
 void
 db_search_queue(DatabaseSearch *search, FsearchQuery *query);

@@ -316,8 +316,8 @@ void
 fsearch_window_action_after_file_open(bool action_mouse) {
     FsearchConfig *config = fsearch_application_get_config(FSEARCH_APPLICATION_DEFAULT);
 
-    if ((config->action_after_file_open_keyboard && !action_mouse) ||
-        (config->action_after_file_open_mouse && action_mouse)) {
+    if ((config->action_after_file_open_keyboard && !action_mouse)
+        || (config->action_after_file_open_mouse && action_mouse)) {
         if (config->action_after_file_open == ACTION_AFTER_OPEN_CLOSE) {
             g_application_quit(G_APPLICATION(FSEARCH_APPLICATION_DEFAULT));
         }
@@ -380,6 +380,13 @@ fsearch_window_action_open_with(GSimpleAction *action, GVariant *variant, gpoint
 }
 
 static void
+on_failed_to_open_file_response(GtkDialog *dialig, GtkResponseType response, gpointer user_data) {
+    if (response != GTK_RESPONSE_YES) {
+        fsearch_window_action_after_file_open(false);
+    }
+}
+
+static void
 fsearch_window_action_open_generic(FsearchApplicationWindow *win, GtkTreeSelectionForeachFunc open_func) {
     GtkTreeSelection *selection = fsearch_application_window_get_listview_selection(win);
     if (!selection) {
@@ -400,14 +407,13 @@ fsearch_window_action_open_generic(FsearchApplicationWindow *win, GtkTreeSelecti
         // open failed
         FsearchConfig *config = fsearch_application_get_config(FSEARCH_APPLICATION_DEFAULT);
         if (config->show_dialog_failed_opening) {
-            gint response = ui_utils_run_gtk_dialog(GTK_WIDGET(win),
-                                                    GTK_MESSAGE_WARNING,
-                                                    GTK_BUTTONS_YES_NO,
-                                                    _("Failed to open file"),
-                                                    _("Do you want to keep the window open?"));
-            if (response != GTK_RESPONSE_YES) {
-                fsearch_window_action_after_file_open(false);
-            }
+            ui_utils_run_gtk_dialog_async(GTK_WIDGET(win),
+                                          GTK_MESSAGE_WARNING,
+                                          GTK_BUTTONS_YES_NO,
+                                          _("Failed to open file"),
+                                          _("Do you want to keep the window open?"),
+                                          G_CALLBACK(on_failed_to_open_file_response),
+                                          NULL);
         }
     }
 }
@@ -417,6 +423,8 @@ fsearch_window_action_close_window(GSimpleAction *action, GVariant *variant, gpo
     FsearchApplicationWindow *self = user_data;
     g_assert(FSEARCH_WINDOW_IS_WINDOW(self));
 
+    fsearch_application_window_prepare_shutdown(self);
+    fsearch_application_window_prepare_close(self);
     gtk_widget_destroy(GTK_WIDGET(self));
 }
 

@@ -29,16 +29,13 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "array.h"
 #include "debug.h"
+#include "fsearch_limits.h"
 #include "fsearch_timer.h"
 #include "fsearch_window.h"
 #include "string_utils.h"
 #include "token.h"
-
-struct _DatabaseSearchEntry {
-    BTreeNode *node;
-    uint32_t pos;
-};
 
 typedef struct search_context_s {
     FsearchQuery *query;
@@ -55,67 +52,54 @@ db_search(DatabaseSearch *search, FsearchQuery *q);
 static DatabaseSearchResult *
 db_search_empty(FsearchQuery *query);
 
-DatabaseSearchEntry *
-db_search_entry_new(BTreeNode *node, uint32_t pos);
-
 static void
-db_search_entry_free(DatabaseSearchEntry *entry);
-
-static void
-db_search_notify_cancelled(FsearchQuery *query) {
-    if (query->db) {
-        db_unref(query->db);
+db_search_cancelled(FsearchQuery *query) {
+    if (!query) {
+        return;
     }
     if (query->callback_cancelled) {
         query->callback_cancelled(query->callback_cancelled_data);
     }
+    fsearch_query_free(query);
+    query = NULL;
 }
 
 static gpointer
 db_search_thread(gpointer user_data) {
     DatabaseSearch *search = user_data;
 
-    g_mutex_lock(&search->query_mutex);
     while (true) {
-        g_cond_wait(&search->search_thread_start_cond, &search->query_mutex);
         if (search->search_thread_terminate) {
             break;
         }
-        while (search->query_ctx) {
-            FsearchQuery *query = search->query_ctx;
-            if (!query) {
-                break;
-            }
-            search->query_ctx = NULL;
-            search->search_terminate = false;
-            g_mutex_unlock(&search->query_mutex);
-            // if query is empty string we are done here
-            DatabaseSearchResult *result = NULL;
-            if (fs_str_is_empty(query->text)) {
-                if (query->pass_on_empty_query) {
-                    result = db_search_empty(query);
-                }
-                else {
-                    result = calloc(1, sizeof(DatabaseSearchResult));
-                }
+
+        FsearchQuery *query = g_async_queue_timeout_pop(search->search_queue, 500000);
+        if (!query) {
+            continue;
+        }
+        search->search_terminate = false;
+        // if query is empty string we are done here
+        DatabaseSearchResult *result = NULL;
+        if (fs_str_is_empty(query->text)) {
+            if (query->pass_on_empty_query) {
+                result = db_search_empty(query);
             }
             else {
-                result = db_search(search, query);
+                result = calloc(1, sizeof(DatabaseSearchResult));
             }
-            g_mutex_lock(&search->query_mutex);
-            if (result) {
-                result->cb_data = query->callback_data;
-                result->db = query->db;
-                query->callback(result);
-            }
-            else {
-                db_search_notify_cancelled(query);
-            }
-            fsearch_query_free(query);
-            query = NULL;
+        }
+        else {
+            result = db_search(search, query);
+        }
+        if (result) {
+            result->cb_data = query->callback_data;
+            result->query = query;
+            query->callback(result);
+        }
+        else {
+            db_search_cancelled(query);
         }
     }
-    g_mutex_unlock(&search->query_mutex);
     return NULL;
 }
 
@@ -200,7 +184,7 @@ db_search_worker(void *user_data) {
     FsearchToken **token = query->token;
     const uint32_t search_in_path = query->flags.search_in_path;
     const uint32_t auto_search_in_path = query->flags.auto_search_in_path;
-    DynamicArray *entries = db_get_entries(query->db);
+    DynamicArray *entries = query->entries;
     BTreeNode **results = ctx->results;
 
     if (!entries) {
@@ -266,10 +250,10 @@ db_search_worker(void *user_data) {
 }
 
 static DatabaseSearchResult *
-db_search_result_new(GPtrArray *results, uint32_t num_folders, uint32_t num_files) {
+db_search_result_new(GArray *entries, uint32_t num_folders, uint32_t num_files) {
     DatabaseSearchResult *result_ctx = calloc(1, sizeof(DatabaseSearchResult));
     assert(result_ctx != NULL);
-    result_ctx->results = results;
+    result_ctx->entries = entries;
     result_ctx->num_folders = num_folders;
     result_ctx->num_files = num_files;
     return result_ctx;
@@ -278,14 +262,13 @@ db_search_result_new(GPtrArray *results, uint32_t num_folders, uint32_t num_file
 static DatabaseSearchResult *
 db_search_empty(FsearchQuery *query) {
     assert(query != NULL);
-    assert(query->db != NULL);
+    assert(query->entries != NULL);
 
-    const uint32_t num_entries = db_get_num_entries(query->db);
+    const uint32_t num_entries = darray_get_num_items(query->entries);
     const uint32_t num_results = query->max_results == 0 ? num_entries : MIN(query->max_results, num_entries);
-    GPtrArray *results = g_ptr_array_sized_new(num_results);
-    g_ptr_array_set_free_func(results, (GDestroyNotify)db_search_entry_free);
+    GArray *results = g_array_sized_new(TRUE, TRUE, sizeof(DatabaseSearchEntry), num_results);
 
-    DynamicArray *entries = db_get_entries(query->db);
+    DynamicArray *entries = query->entries;
 
     uint32_t num_folders = 0;
     uint32_t num_files = 0;
@@ -313,8 +296,10 @@ db_search_empty(FsearchQuery *query) {
         else {
             num_files++;
         }
-        DatabaseSearchEntry *entry = db_search_entry_new(node, pos);
-        g_ptr_array_add(results, entry);
+
+        DatabaseSearchEntry entry = {.node = node, .pos = pos};
+        g_array_append_val(results, entry);
+
         pos++;
     }
     return db_search_result_new(results, num_folders, num_files);
@@ -324,7 +309,7 @@ static DatabaseSearchResult *
 db_search(DatabaseSearch *search, FsearchQuery *q) {
     assert(search != NULL);
 
-    const uint32_t num_entries = db_get_num_entries(q->db);
+    const uint32_t num_entries = darray_get_num_items(q->entries);
     if (num_entries == 0) {
         return db_search_result_new(NULL, 0, 0);
     }
@@ -379,8 +364,7 @@ db_search(DatabaseSearch *search, FsearchQuery *q) {
         num_results += thread_data[i]->num_results;
     }
 
-    GPtrArray *results = g_ptr_array_sized_new(MIN(num_results, max_results));
-    g_ptr_array_set_free_func(results, (GDestroyNotify)db_search_entry_free);
+    GArray *results = g_array_sized_new(TRUE, TRUE, sizeof(DatabaseSearchEntry), MIN(num_results, max_results));
 
     uint32_t num_folders = 0;
     uint32_t num_files = 0;
@@ -404,8 +388,10 @@ db_search(DatabaseSearch *search, FsearchQuery *q) {
             else {
                 num_files++;
             }
-            DatabaseSearchEntry *entry = db_search_entry_new(node, pos);
-            g_ptr_array_add(results, entry);
+
+            DatabaseSearchEntry entry = {.node = node, .pos = pos};
+            g_array_append_val(results, entry);
+
             pos++;
         }
         search_thread_context_free(ctx);
@@ -417,37 +403,47 @@ db_search(DatabaseSearch *search, FsearchQuery *q) {
     return db_search_result_new(results, num_folders, num_files);
 }
 
-void
-db_search_results_clear(DatabaseSearch *search) {
-    assert(search != NULL);
-
-    // free entries
-    if (search->results) {
-        g_ptr_array_free(search->results, TRUE);
-        search->results = NULL;
+static void
+db_search_clear_queue(GAsyncQueue *queue) {
+    while (true) {
+        // clear all queued queries
+        FsearchQuery *queued_query = g_async_queue_try_pop(queue);
+        if (!queued_query) {
+            break;
+        }
+        db_search_cancelled(queued_query);
     }
-    search->num_folders = 0;
-    search->num_files = 0;
-    return;
+}
+
+void
+db_search_result_free(DatabaseSearchResult *result) {
+    if (!result) {
+        return;
+    }
+
+    if (result->entries) {
+        g_array_free(result->entries, TRUE);
+        result->entries = NULL;
+    }
+    if (result->query) {
+        fsearch_query_free(result->query);
+        result->query = NULL;
+    }
+
+    result->num_files = 0;
+    result->num_folders = 0;
+
+    free(result);
+    result = NULL;
 }
 
 void
 db_search_free(DatabaseSearch *search) {
     assert(search != NULL);
 
-    db_search_results_clear(search);
-    g_mutex_lock(&search->query_mutex);
-    if (search->query_ctx) {
-        fsearch_query_free(search->query_ctx);
-        search->query_ctx = NULL;
-    }
-    g_mutex_unlock(&search->query_mutex);
-
+    db_search_clear_queue(search->search_queue);
     search->search_thread_terminate = true;
-    g_cond_signal(&search->search_thread_start_cond);
     g_thread_join(search->search_thread);
-    g_mutex_clear(&search->query_mutex);
-    g_cond_clear(&search->search_thread_start_cond);
     g_free(search);
     search = NULL;
     return;
@@ -468,94 +464,22 @@ db_search_entry_set_pos(DatabaseSearchEntry *entry, uint32_t pos) {
     entry->pos = pos;
 }
 
-static void
-db_search_entry_free(DatabaseSearchEntry *entry) {
-    if (entry) {
-        g_free(entry);
-        entry = NULL;
-    }
-}
-
-DatabaseSearchEntry *
-db_search_entry_new(BTreeNode *node, uint32_t pos) {
-    DatabaseSearchEntry *entry = calloc(1, sizeof(DatabaseSearchEntry));
-    assert(entry != NULL);
-
-    entry->node = node;
-    entry->pos = pos;
-    return entry;
-}
-
 DatabaseSearch *
 db_search_new(FsearchThreadPool *pool) {
     DatabaseSearch *db_search = calloc(1, sizeof(DatabaseSearch));
     assert(db_search != NULL);
 
     db_search->pool = pool;
-    g_mutex_init(&db_search->query_mutex);
-    g_cond_init(&db_search->search_thread_start_cond);
+    db_search->search_queue = g_async_queue_new();
     db_search->search_thread = g_thread_new("fsearch_search_thread", db_search_thread, db_search);
     return db_search;
 }
 
-uint32_t
-db_search_get_num_results(DatabaseSearch *search) {
-    assert(search != NULL);
-    return search->results->len;
-}
-
-uint32_t
-db_search_get_num_files(DatabaseSearch *search) {
-    assert(search != NULL);
-    return search->num_files;
-}
-
-uint32_t
-db_search_get_num_folders(DatabaseSearch *search) {
-    assert(search != NULL);
-    return search->num_folders;
-}
-
-static void
-update_index(DatabaseSearch *search) {
-    assert(search != NULL);
-
-    for (uint32_t i = 0; i < search->results->len; ++i) {
-        DatabaseSearchEntry *entry = g_ptr_array_index(search->results, i);
-        entry->pos = i;
-    }
-}
-
-void
-db_search_remove_entry(DatabaseSearch *search, DatabaseSearchEntry *entry) {
-    if (search == NULL) {
-        return;
-    }
-    if (entry == NULL) {
-        return;
-    }
-
-    g_ptr_array_remove(search->results, (void *)entry);
-    update_index(search);
-}
-
-GPtrArray *
-db_search_get_results(DatabaseSearch *search) {
-    assert(search != NULL);
-    return search->results;
-}
-
 void
 db_search_queue(DatabaseSearch *search, FsearchQuery *query) {
-    g_mutex_lock(&search->query_mutex);
-    if (search->query_ctx) {
-        db_search_notify_cancelled(search->query_ctx);
-        fsearch_query_free(search->query_ctx);
-        search->query_ctx = NULL;
-    }
-    search->query_ctx = query;
+
+    db_search_clear_queue(search->search_queue);
     search->search_terminate = true;
-    g_mutex_unlock(&search->query_mutex);
-    g_cond_signal(&search->search_thread_start_cond);
+    g_async_queue_push(search->search_queue, query);
 }
 

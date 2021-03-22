@@ -72,6 +72,10 @@ typedef struct {
     void *cancelled_cb_data;
 } DatabaseUpdateContext;
 
+static const char *fsearch_bus_name = "org.fsearch.fsearch";
+static const char *fsearch_db_worker_bus_name = "org.fsearch.database_worker";
+static const char *fsearch_object_path = "/org/fsearch/fsearch";
+
 enum { DATABASE_SCAN_STARTED, DATABASE_UPDATE_FINISHED, DATABASE_LOAD_STARTED, NUM_SIGNALS };
 
 static guint signals[NUM_SIGNALS];
@@ -393,47 +397,56 @@ quit_activated(GSimpleAction *action, GVariant *parameter, gpointer app) {
 }
 
 static void
-preferences_activated(GSimpleAction *action, GVariant *parameter, gpointer gapp) {
-    g_assert(FSEARCH_IS_APPLICATION(gapp));
-    FsearchApplication *app = FSEARCH_APPLICATION(gapp);
-
-    FsearchPreferencesPage page = g_variant_get_uint32(parameter);
-    bool update_db = false;
-    bool update_list = false;
-    bool update_search = false;
-
-    GtkWindow *win_active = gtk_application_get_active_window(GTK_APPLICATION(app));
-    if (!win_active) {
-        return;
-    }
-    FsearchConfig *new_config =
-        preferences_ui_launch(app->config, win_active, page, &update_db, &update_list, &update_search);
+on_preferences_ui_finished(FsearchConfig *new_config) {
     if (!new_config) {
         return;
     }
 
+    FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
+
+    FsearchConfigCompareResult config_diff = {.database_config_changed = true,
+                                              .listview_config_changed = true,
+                                              .search_config_changed = true};
+
     if (app->config) {
+        config_diff = config_cmp(app->config, new_config);
         config_free(app->config);
     }
     app->config = new_config;
     config_save(app->config);
 
+    g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", new_config->enable_dark_theme, NULL);
     fsearch_application_db_auto_update(app);
 
-    if (update_db) {
+    if (config_diff.database_config_changed) {
         fsearch_database_update(true);
     }
 
     GList *windows = gtk_application_get_windows(GTK_APPLICATION(app));
     for (GList *w = windows; w; w = w->next) {
         FsearchApplicationWindow *window = w->data;
-        if (update_search) {
+        if (config_diff.search_config_changed) {
             fsearch_application_window_update_search(window);
         }
-        if (update_list) {
+        if (config_diff.listview_config_changed) {
             fsearch_application_window_update_listview_config(window);
         }
     }
+}
+
+static void
+preferences_activated(GSimpleAction *action, GVariant *parameter, gpointer gapp) {
+    g_assert(FSEARCH_IS_APPLICATION(gapp));
+    FsearchApplication *app = FSEARCH_APPLICATION(gapp);
+
+    FsearchPreferencesPage page = g_variant_get_uint32(parameter);
+
+    GtkWindow *win_active = gtk_application_get_active_window(GTK_APPLICATION(app));
+    if (!win_active) {
+        return;
+    }
+    FsearchConfig *copy_config = config_copy(app->config);
+    preferences_ui_launch(copy_config, win_active, page, on_preferences_ui_finished);
 }
 
 void
@@ -648,8 +661,143 @@ fsearch_application_command_line(GApplication *app, GApplicationCommandLine *cmd
     return G_APPLICATION_CLASS(fsearch_application_parent_class)->command_line(app, cmdline);
 }
 
+typedef struct {
+    GMainLoop *loop;
+    bool update_called_on_primary;
+} FsearchApplicationDatabaseWorker;
+
+static void
+on_action_group_changed(GDBusConnection *connection,
+                        const gchar *sender_name,
+                        const gchar *object_path,
+                        const gchar *interface_name,
+                        const gchar *signal_name,
+                        GVariant *parameters,
+                        gpointer user_data) {
+    return;
+}
+
+static void
+on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+    FsearchApplicationDatabaseWorker *worker_ctx = user_data;
+
+    GDBusActionGroup *dbus_group = g_dbus_action_group_get(connection, fsearch_bus_name, fsearch_object_path);
+
+    guint signal_id = g_dbus_connection_signal_subscribe(connection,
+                                                         fsearch_bus_name,
+                                                         "org.gtk.Actions",
+                                                         "Changed",
+                                                         fsearch_object_path,
+                                                         NULL,
+                                                         G_DBUS_SIGNAL_FLAGS_NONE,
+                                                         on_action_group_changed,
+                                                         NULL,
+                                                         NULL);
+
+    GVariant *reply = g_dbus_connection_call_sync(connection,
+                                                  fsearch_bus_name,
+                                                  fsearch_object_path,
+                                                  "org.gtk.Actions",
+                                                  "DescribeAll",
+                                                  NULL,
+                                                  G_VARIANT_TYPE("(a{s(bgav)})"),
+                                                  G_DBUS_CALL_FLAGS_NO_AUTO_START,
+                                                  -1,
+                                                  NULL,
+                                                  NULL);
+    g_dbus_connection_signal_unsubscribe(connection, signal_id);
+
+    if (dbus_group && reply) {
+        trace("[database] trigger update in primary instance\n");
+        g_action_group_activate_action(G_ACTION_GROUP(dbus_group), "update_database", NULL);
+        g_object_unref(dbus_group);
+
+        worker_ctx->update_called_on_primary = true;
+    }
+    if (worker_ctx && worker_ctx->loop) {
+        g_main_loop_quit(worker_ctx->loop);
+    }
+}
+
+static void
+on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+    FsearchApplicationDatabaseWorker *worker_ctx = user_data;
+    if (worker_ctx && worker_ctx->loop) {
+        g_main_loop_quit(worker_ctx->loop);
+    }
+}
+
+static int
+local_database_update() {
+    GTimer *timer = fsearch_timer_start();
+
+    FsearchConfig *config = config = calloc(1, sizeof(FsearchConfig));
+    if (!config_load(config)) {
+        if (!config_load_default(config)) {
+            g_printerr("[database_update] failed to load config\n");
+            return 1;
+        }
+    }
+    FsearchDatabase *db =
+        db_new(config->locations, config->exclude_locations, config->exclude_files, config->exclude_hidden_items);
+    if (!db) {
+        g_printerr("[database_update] failed allocate database\n");
+        config_free(config);
+        config = NULL;
+        return 1;
+    }
+
+    db_lock(db);
+    int res = !db_scan(db, NULL, NULL);
+    db_unlock(db);
+    db_unref(db);
+
+    config_free(config);
+    config = NULL;
+
+    if (res == 0) {
+        fsearch_timer_stop(timer, "[database_update] finished in %.2f ms\n");
+        timer = NULL;
+    }
+    else {
+        fsearch_timer_stop(timer, "[database_update] failed after %.2f ms\n");
+        timer = NULL;
+    }
+    return res;
+}
+
+static int
+fsearch_application_local_database_update() {
+    // First detect if the another instance of fsearch is already registered
+    // If yes, trigger update there, so the UI is aware of the update and can display its progress
+    FsearchApplicationDatabaseWorker worker_ctx = {};
+    worker_ctx.loop = g_main_loop_new(NULL, FALSE);
+    guint owner_id = g_bus_own_name(G_BUS_TYPE_SESSION,
+                                    fsearch_db_worker_bus_name,
+                                    G_BUS_NAME_OWNER_FLAGS_NONE,
+                                    NULL,
+                                    on_name_acquired,
+                                    on_name_lost,
+                                    &worker_ctx,
+                                    NULL);
+    g_main_loop_run(worker_ctx.loop);
+    g_bus_unown_name(owner_id);
+
+    if (worker_ctx.update_called_on_primary) {
+        // triggered update in primary instance, we're done here
+        return 0;
+    }
+    else {
+        // no primary instance found, perform update
+        return local_database_update();
+    }
+}
+
 static gint
 fsearch_application_handle_local_options(GApplication *application, GVariantDict *options) {
+    if (g_variant_dict_contains(options, "update-database")) {
+        return fsearch_application_local_database_update();
+    }
     if (g_variant_dict_contains(options, "version")) {
         g_print("FSearch %s\n", PACKAGE_VERSION);
         return 0;
@@ -719,7 +867,7 @@ FsearchApplication *
 fsearch_application_new(void) {
     FsearchApplication *self = g_object_new(FSEARCH_APPLICATION_TYPE,
                                             "application-id",
-                                            "org.fsearch.fsearch",
+                                            fsearch_bus_name,
                                             "flags",
                                             G_APPLICATION_HANDLES_COMMAND_LINE,
                                             NULL);

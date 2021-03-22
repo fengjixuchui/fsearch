@@ -7,9 +7,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FSearch 0.1beta\n"
 "Report-Msgid-Bugs-To: christian.boxdoerfer@posteo.de\n"
-"POT-Creation-Date: 2021-03-07 16:31+0100\n"
-"PO-Revision-Date: 2020-10-27 15:26+0000\n"
-"Last-Translator: Yuriy Balyuk <veksho@gmail.com>\n"
+"POT-Creation-Date: 2021-03-14 16:52+0100\n"
+"PO-Revision-Date: 2021-03-21 18:29+0000\n"
+"Last-Translator: Andrij Mizyk <andmizyk@gmail.com>\n"
 "Language-Team: Ukrainian <https://hosted.weblate.org/projects/fsearch/"
 "translations/uk/>\n"
 "Language: uk\n"
@@ -18,38 +18,39 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2;\n"
-"X-Generator: Weblate 4.3.2-dev\n"
+"X-Generator: Weblate 4.5.2-dev\n"
 
-#: src/database.c:1023
-msgid "Sorting..."
-msgstr "Сортування..."
+#: src/database.c:794
+msgid "Building lookup list…"
+msgstr "Будування списку пошуку…"
 
-#: src/fsearch.c:355
+#: src/database.c:802
+msgid "Sorting…"
+msgstr "Сортування…"
+
+#: src/fsearch.c:382
 msgid "translator-credits"
-msgstr "Andrij Mizyk andmizyk@gmail.com"
+msgstr "Andrij Mizyk <andmizyk@gmail.com>"
 
-#: src/fsearch.c:357
+#: src/fsearch.c:384
 msgid "A search utility focusing on performance and advanced features"
 msgstr "Пошукова утиліта орієнтована на швидкість та розширені можливості"
 
-#: src/fsearch.c:633
-#, fuzzy
+#: src/fsearch.c:673
 msgid "Open a new application window"
-msgstr "Відкрити за допомогою"
+msgstr "Відкрити нове вікно програми"
 
-#: src/fsearch.c:634
+#: src/fsearch.c:674
 msgid "Show the application preferences"
-msgstr ""
+msgstr "Показати налаштування програми"
 
-#: src/fsearch.c:635
-#, fuzzy
+#: src/fsearch.c:675
 msgid "Update the database and exit"
-msgstr "Оновити базу даних"
+msgstr "Оновити базу даних і вийти"
 
-#: src/fsearch.c:636
-#, fuzzy
+#: src/fsearch.c:676
 msgid "Print version information and exit"
-msgstr "Показати відомості про версію"
+msgstr "Вивести дані про версію і вийти"
 
 #: src/fsearch.glade:73
 msgid "New window"
@@ -59,13 +60,13 @@ msgstr "Нове вікно"
 msgid "Update database"
 msgstr "Оновити базу даних"
 
-#: src/fsearch.glade:103 src/fsearch.glade:623
+#: src/fsearch.glade:103 src/fsearch.glade:630
 msgid "Cancel database update"
 msgstr "Скасувати оновлення бази даних"
 
 #: src/fsearch.glade:137 src/menus.ui:112
 msgid "Search in Path"
-msgstr "Шукати у назві шляху"
+msgstr "Шукати в назві шляху"
 
 #: src/fsearch.glade:151 src/menus.ui:116
 msgid "Match Case"
@@ -77,17 +78,17 @@ msgstr "Дозволити регулярні вирази"
 
 #: src/fsearch.glade:190 src/menus.ui:95
 msgid "Show Statusbar"
-msgstr "Відображати рядок стану"
+msgstr "Показувати рядок стану"
 
 #: src/fsearch.glade:204 src/menus.ui:99
 msgid "Show Filter"
-msgstr "Відображати фільтр"
+msgstr "Показувати фільтр"
 
 #: src/fsearch.glade:218 src/menus.ui:103
 msgid "Show Search Button"
-msgstr "Відображати кнопку Пошук"
+msgstr "Показувати кнопку Пошук"
 
-#: src/fsearch.glade:244 src/menus.ui:84 src/preferences.ui:37
+#: src/fsearch.glade:244 src/menus.ui:84 src/preferences.ui:48
 msgid "Preferences"
 msgstr "Налаштування"
 
@@ -105,46 +106,46 @@ msgstr "Знайдені результати"
 
 #: src/fsearch.glade:418
 msgid "0 Items"
-msgstr "0 об'єктів"
+msgstr "0 обʼєктів"
 
 #: src/fsearch.glade:455
 msgid "Index:"
 msgstr "Індексування:"
 
-#: src/fsearch.glade:523
+#: src/fsearch.glade:530
 msgid "Number of selected folders"
-msgstr "Кількість вибраних папок"
+msgstr "Кількість вибраних каталогів"
 
-#: src/fsearch.glade:524 src/fsearch.glade:549
+#: src/fsearch.glade:531 src/fsearch.glade:556
 msgid "0/0"
 msgstr "0/0"
 
-#: src/fsearch.glade:548
+#: src/fsearch.glade:555
 msgid "Number of selected files"
 msgstr "Кількість вибраних файлів"
 
-#: src/fsearch.glade:607 src/fsearch_window.c:142 src/overlay.ui:102
+#: src/fsearch.glade:614 src/fsearch_window.c:140 src/overlay.ui:102
 #, c-format
 msgid "Updating Database…"
 msgstr "Оновлення бази…"
 
-#: src/fsearch.glade:640
+#: src/fsearch.glade:647
 msgid "page0"
 msgstr "сторінка0"
 
-#: src/fsearch.glade:664
+#: src/fsearch.glade:671
 msgid "Number of database items"
 msgstr "Кількість елементів бази даних"
 
-#: src/fsearch.glade:665
+#: src/fsearch.glade:672
 msgid "(empty)"
 msgstr "(порожньо)"
 
-#: src/fsearch.glade:676
+#: src/fsearch.glade:683
 msgid "page1"
 msgstr "сторінка1"
 
-#: src/fsearch.glade:702
+#: src/fsearch.glade:709
 msgid ""
 "Search term contains upper case characters.\n"
 "<b>Match Case</b> was temporarily activated for this term."
@@ -152,11 +153,11 @@ msgstr ""
 "Запит містить символи верхнього регістру.\n"
 "<b>Врахування регістру</b> було тимчасово активовано для цього запиту."
 
-#: src/fsearch.glade:733 src/fsearch.glade:786
+#: src/fsearch.glade:740 src/fsearch.glade:793
 msgid "CASE"
 msgstr "РЕГ"
 
-#: src/fsearch.glade:809
+#: src/fsearch.glade:816
 msgid ""
 "Search term contains path separators.\n"
 "<b>Search in Path</b> was temporarily activated for this term."
@@ -164,23 +165,23 @@ msgstr ""
 "Запит містить роздільники шляхів.\n"
 "<b>Пошук у назві шляху</b> був тимчасово активований для цього запиту."
 
-#: src/fsearch.glade:840 src/fsearch.glade:893
+#: src/fsearch.glade:847 src/fsearch.glade:900
 msgid "PATH"
 msgstr "ШЛЯХ"
 
-#: src/fsearch.glade:946
+#: src/fsearch.glade:953
 msgid "REGEX"
 msgstr "ВИР"
 
-#: src/fsearch.glade:1066
+#: src/fsearch.glade:1073
 msgid "Search…"
 msgstr "Пошук…"
 
-#: src/fsearch.glade:1088
+#: src/fsearch.glade:1095
 msgid "Select a Filter"
 msgstr "Обрати фільтр"
 
-#: src/fsearch.glade:1119 src/preferences.ui:679
+#: src/fsearch.glade:1126 src/preferences.ui:690
 msgid "Search"
 msgstr "Пошук"
 
@@ -216,56 +217,49 @@ msgstr "Зображення"
 msgid "Videos"
 msgstr "Відео"
 
-#: src/fsearch_preferences_widgets.c:193 src/fsearch_preferences_widgets.c:234
+#: src/fsearch_preferences_widgets.c:180 src/fsearch_preferences_widgets.c:219
 msgid "Active"
-msgstr "Активно"
+msgstr "Активний"
 
-#: src/fsearch_preferences_widgets.c:197 src/fsearch_preferences_widgets.c:238
+#: src/fsearch_preferences_widgets.c:184 src/fsearch_preferences_widgets.c:223
 #: src/listview.c:209 src/menus.ui:222
 msgid "Path"
 msgstr "Шлях"
 
-#: src/fsearch_preferences_widgets.c:200
+#: src/fsearch_preferences_widgets.c:187
 msgid "Update"
 msgstr "Оновляти"
 
-#: src/fsearch_window.c:121 src/overlay.ui:32
+#: src/fsearch_window.c:119 src/overlay.ui:32
 #, c-format
 msgid "Loading Database…"
 msgstr "Завантаження бази даних…"
 
-#: src/fsearch_window.c:162 src/fsearch_window.c:515 src/fsearch_window.c:968
+#: src/fsearch_window.c:160 src/fsearch_window.c:521 src/fsearch_window.c:987
 #, c-format
 msgid "%'d Items"
-msgstr "%'d об'єктів"
+msgstr "%'d обʼєктів"
 
-#: src/fsearch_window.c:448 src/fsearch_window.c:605
+#: src/fsearch_window.c:449 src/fsearch_window.c:616
 msgid "Querying…"
 msgstr "Йде запит…"
 
-#: src/fsearch_window.c:784 src/fsearch_window_actions.c:406
+#: src/fsearch_window.c:518
+#, c-format
+msgid "≥%'d Items"
+msgstr "≥%'d обʼєктів"
+
+#: src/fsearch_window.c:804 src/fsearch_window_actions.c:413
 msgid "Failed to open file"
 msgstr "Не вдалося відкрити файл"
 
-#: src/fsearch_window.c:785 src/fsearch_window_actions.c:407
+#: src/fsearch_window.c:805 src/fsearch_window_actions.c:414
 msgid "Do you want to keep the window open?"
 msgstr "Залишити вікно відкритим?"
 
-#: src/fsearch_window.c:974
+#: src/fsearch_window.c:993
 msgid "Last Updated: %Y-%m-%d %H:%M"
 msgstr "Останнє оновлення: %Y-%m-%d %H:%M"
-
-#: src/fsearch_window.c:1149
-msgid "Background tasks are active."
-msgstr "Виконуються фонові завдання."
-
-#: src/fsearch_window.c:1151
-msgid ""
-"Closing the window isn't possible right now.\n"
-"Please wait a moment and then try again."
-msgstr ""
-"Закриття вікна зараз неможливе.\n"
-"Зачекайте та повторіть спробу."
 
 #: src/fsearch_window_actions.c:77
 #, c-format
@@ -330,13 +324,12 @@ msgid "Cancel Update"
 msgstr "Скасувати оновлення"
 
 #: src/menus.ui:42
-#, fuzzy
 msgid "Close Window"
-msgstr "Нове вікно"
+msgstr "Закрити вікно"
 
 #: src/menus.ui:54
 msgid "_Edit"
-msgstr "_Зміни"
+msgstr "З_міни"
 
 #: src/menus.ui:57 src/menus.ui:175
 msgid "_Copy"
@@ -344,7 +337,7 @@ msgstr "_Копіювати"
 
 #: src/menus.ui:62 src/menus.ui:186
 msgid "Cu_t"
-msgstr ""
+msgstr "Вирі_зати"
 
 #: src/menus.ui:69
 msgid "Select All"
@@ -360,7 +353,7 @@ msgstr "Інвертувати виділене"
 
 #: src/menus.ui:92
 msgid "_View"
-msgstr "_Вигляд"
+msgstr "Ви_гляд"
 
 #: src/menus.ui:109
 msgid "_Search"
@@ -380,15 +373,15 @@ msgstr "Відкрити ка_талог"
 
 #: src/menus.ui:181
 msgid "_Copy Filepath"
-msgstr "Скопіювати _шлях"
+msgstr "Копіювати _шлях"
 
 #: src/menus.ui:194
 msgid "Move to _Trash"
-msgstr "Перенести у _смітник"
+msgstr "Перенести в _смітник"
 
 #: src/menus.ui:200
 msgid "_Delete"
-msgstr "Ви_далити"
+msgstr "Вида_лити"
 
 #: src/overlay.ui:46 src/overlay.ui:116
 msgid "…"
@@ -404,7 +397,7 @@ msgstr "Це займе деякий час."
 
 #: src/overlay.ui:172
 msgid "Empty Query"
-msgstr "Пустий запит"
+msgstr "Порожній запит"
 
 #: src/overlay.ui:187
 msgid "Press <b>Ctrl + F</b> and start typing"
@@ -415,9 +408,8 @@ msgid "Empty Database"
 msgstr "База порожня"
 
 #: src/overlay.ui:250
-#, fuzzy
 msgid "Add folders"
-msgstr "Каталоги"
+msgstr "Додати каталоги"
 
 #: src/overlay.ui:292
 msgid "No Results Found"
@@ -425,176 +417,195 @@ msgstr "Нічого не знайдено"
 
 #: src/overlay.ui:307
 msgid "Try a different search"
-msgstr "Спробуйте написати по іншому"
+msgstr "Спробуйте написати інакше"
 
-#: src/preferences.ui:105
+#: src/preferences.ui:116
 msgid "Enable dark theme"
 msgstr "Увімкнути темну тему"
 
-#: src/preferences.ui:119
+#: src/preferences.ui:130
 msgid "Enable client-side decorations (requires restart)"
-msgstr ""
-"Увімкнути декорування вікна зі сторони клієнта (потрібно перезапустити)"
+msgstr "Увімкнути декорації на стороні клієнта (потрібен перезапуск)"
 
-#: src/preferences.ui:133
+#: src/preferences.ui:144
 msgid "Use binary units instead of decimal units"
-msgstr "Використовувати двійкову СЧ замість десяткової"
+msgstr "Вживати двійкові одиниці замість десяткових"
 
-#: src/preferences.ui:148
+#: src/preferences.ui:159
 msgid "Remember window size"
-msgstr "Пам'ятати розмір вікна"
+msgstr "Памʼятати розмір вікна"
 
-#: src/preferences.ui:183
+#: src/preferences.ui:194
 msgid "with keyboard shortcuts or menu entries"
-msgstr "за допомогою комбінацій клавіш або пунктів меню"
+msgstr "комбінаціями клавіш або пунктами меню"
 
-#: src/preferences.ui:198
+#: src/preferences.ui:209
 msgid "with double click"
 msgstr "подвійним клацанням"
 
-#: src/preferences.ui:226
+#: src/preferences.ui:237
 msgid "Behaviour after successfully opening a file:"
-msgstr "Поведінка після успішного відкриття файлу:"
+msgstr "Дії після успішного відкриття файлу:"
 
-#: src/preferences.ui:242
+#: src/preferences.ui:253
 msgid "Nothing"
-msgstr "Нічого не робити"
+msgstr "Нічого"
 
-#: src/preferences.ui:243
+#: src/preferences.ui:254
 msgid "Minimize"
-msgstr "Сгорнути"
+msgstr "Згорнути"
 
-#: src/preferences.ui:244
+#: src/preferences.ui:255
 msgid "Close"
 msgstr "Закрити"
 
-#: src/preferences.ui:270
+#: src/preferences.ui:281
 msgid "General:"
 msgstr "Основне:"
 
-#: src/preferences.ui:305
+#: src/preferences.ui:316
 msgid "Show highlighted search terms"
-msgstr "Виділяти знайдений текст у списку"
+msgstr "Виділяти пошуковий текст"
 
-#: src/preferences.ui:320
+#: src/preferences.ui:331
 msgid "Show tooltips"
-msgstr "Відображати підказки"
+msgstr "Показувати підказки"
 
-#: src/preferences.ui:334
+#: src/preferences.ui:345
 msgid "Show icons in name column"
-msgstr "Відображати іконки в колонці Назва"
+msgstr "Показувати значки в стовпці назви"
 
-#: src/preferences.ui:348
+#: src/preferences.ui:359
 msgid "Remember column configuration"
-msgstr "Пам'ятати налаштування стовпців"
+msgstr "Памʼятати налаштування стовпців"
 
-#: src/preferences.ui:362
+#: src/preferences.ui:373
 msgid "Remember sort order"
-msgstr "Пам'ятати порядок сортування"
+msgstr "Памʼятати порядок сортування"
 
-#: src/preferences.ui:376
+#: src/preferences.ui:387
 msgid "Open path with double click in path column"
-msgstr "Відкрийте шлях подвійним клацанням у стовпці шляху"
+msgstr "Відкривати подвійним клацанням у стовпці шляху"
 
-#: src/preferences.ui:390
+#: src/preferences.ui:401
 msgid "Single click to open"
 msgstr "Відкривати одним клацанням"
 
-#: src/preferences.ui:410
+#: src/preferences.ui:421
 msgid "Results:"
 msgstr "Результати:"
 
-#: src/preferences.ui:451
+#: src/preferences.ui:462
 msgid "Show database indexing status"
 msgstr "Показувати стан індексування бази даних"
 
-#: src/preferences.ui:471
+#: src/preferences.ui:482
 msgid "Statusbar:"
-msgstr "Панель статусу:"
+msgstr "Рядок стану:"
 
-#: src/preferences.ui:512
+#: src/preferences.ui:523
 msgid "Show warning dialogs when:"
-msgstr "Показувати діалогові вікна попередження, якщо:"
+msgstr "Показувати вікна попереджень, якщо:"
 
-#: src/preferences.ui:522
+#: src/preferences.ui:533
 msgid "file / folder failed to open"
-msgstr "не вдалося відкрити файл / теку"
+msgstr "не вдалося відкрити файл / каталог"
 
-#: src/preferences.ui:544
+#: src/preferences.ui:555
 msgid "Dialogs:"
 msgstr "Вікна:"
 
-#: src/preferences.ui:569
+#: src/preferences.ui:580
 msgid "Interface"
 msgstr "Інтерфейс"
 
-#: src/preferences.ui:588
+#: src/preferences.ui:599
 msgid "Limit number of results:"
 msgstr "Обмежити к-сть результатів:"
 
-#: src/preferences.ui:616
+#: src/preferences.ui:627
 msgid "Search in path when query contains path separators"
 msgstr "Шукати по шляху, якщо запит містить роздільники"
 
-#: src/preferences.ui:630
+#: src/preferences.ui:641
 msgid "Search as you type"
 msgstr "Шукати під час набирання"
 
-#: src/preferences.ui:644
+#: src/preferences.ui:655
 msgid "Hide results when search is empty"
-msgstr "Ховати результати, якщо поле пошуку порожнє"
+msgstr "Ховати результати, якщо пошукове поле порожнє"
 
-#: src/preferences.ui:658
+#: src/preferences.ui:669
 msgid "Match case when query contains at least one upper case character"
 msgstr ""
 "Враховувати регістр, якщо запит містить принаймні один символ верхнього "
 "регістру"
 
-#: src/preferences.ui:698
+#: src/preferences.ui:709
 msgid "Update database on start"
-msgstr "Оновлювати базу даних під час запуску"
+msgstr "Оновляти базу під час запуску"
 
-#: src/preferences.ui:759
+#: src/preferences.ui:727
+msgid "Update every"
+msgstr "Оновляти кожні"
+
+#: src/preferences.ui:748
+msgid "0"
+msgstr "0"
+
+#: src/preferences.ui:765
+msgid "hour(s) and"
+msgstr "годин і"
+
+#: src/preferences.ui:777
+msgid "30"
+msgstr "30"
+
+#: src/preferences.ui:795
+msgid "minute(s)"
+msgstr "хвилин"
+
+#: src/preferences.ui:866
 msgid "Add path to be included in database"
 msgstr "Додати шлях для включення в базу"
 
-#: src/preferences.ui:775 src/preferences.ui:873
+#: src/preferences.ui:882 src/preferences.ui:980
 msgid "Remove selected path"
 msgstr "Вилучити вибраний шлях"
 
-#: src/preferences.ui:801
+#: src/preferences.ui:908
 msgid "Include"
-msgstr "Включати"
+msgstr "Враховувати"
 
-#: src/preferences.ui:857
+#: src/preferences.ui:964
 msgid "Add path to be excluded from database"
 msgstr "Додати шлях, який потрібно виключити з бази"
 
-#: src/preferences.ui:909 src/preferences.ui:922
+#: src/preferences.ui:1016 src/preferences.ui:1029
 msgid "Supports wildcards. Multiple entries must be separated by ';'"
-msgstr "Підтримуються шаблони. Кілька записів мають бути розділені знаком ';'"
+msgstr "Підтримуються шаблони. Записи повинні розділятися знаком ';'"
 
-#: src/preferences.ui:910
+#: src/preferences.ui:1017
 msgid "Exclude files:"
 msgstr "Виключати файли:"
 
-#: src/preferences.ui:923
+#: src/preferences.ui:1030
 msgid "e.g. \".git;*.tmp\""
 msgstr "напр. \".git;*.tmp\""
 
-#: src/preferences.ui:940
+#: src/preferences.ui:1047
 msgid "Exclude hidden files and folders"
-msgstr "Виключати приховані файли і каталоги"
+msgstr "Не враховувати приховані файли і каталоги"
 
-#: src/preferences.ui:961
+#: src/preferences.ui:1068
 msgid "Exclude"
 msgstr "Виключати"
 
-#: src/preferences.ui:984
+#: src/preferences.ui:1091
 msgid "Database"
 msgstr "База даних"
 
-#: src/preferences.ui:1015
+#: src/preferences.ui:1123
 msgid ""
 "<b>Enable dark theme:</b>\n"
 "\n"
@@ -604,8 +615,15 @@ msgid ""
 "Note that not all system themes provide such a darker variant, therefore "
 "enabling this setting might not have an effect."
 msgstr ""
+"<b>Увімкнути темну тему:</b>\n"
+"\n"
+"Якщо ввімкнено, системна тема запитується на використання темного стилю "
+"програми <i>(як-от яскравий текст на темних елементах КІ)</i>.\n"
+"\n"
+"Зауважте, що не всі системні теми мають темний варіянт, тому ввімкнення "
+"цього налаштування може не мати ефекту."
 
-#: src/preferences.ui:1032
+#: src/preferences.ui:1140
 msgid ""
 "<b>Enable client-side decorations:</b>\n"
 "\n"
@@ -616,8 +634,16 @@ msgid ""
 "below it.\n"
 "This resembles a more traditonal UI layout and takes a little bit more space."
 msgstr ""
+"<b>Увімкнути декорації на стороні клієнта:</b>\n"
+"\n"
+"Якщо ввімкнено, пошукове поле й основне меню відображатимуться в області "
+"заголовка.\n"
+"\n"
+"Якщо вимкнено, основне меню відображатиметься як стрічка меню, а пошукове "
+"поле під ним.\n"
+"Що нагадує традиційніший вигляд КІ, але потребує більше простору."
 
-#: src/preferences.ui:1051
+#: src/preferences.ui:1159
 msgid ""
 "<b>Use binary units instead of decimal units:</b>\n"
 "\n"
@@ -628,8 +654,16 @@ msgid ""
 "\t• <b>Decimal  units:</b> This refers to decimal SI prefixes <i>(e.g. 1 kB "
 "= 1000 bytes)</i>"
 msgstr ""
+"<b>Вживати двійкові одиниці замість десяткових:</b>\n"
+"\n"
+"Це налаштування визначає, як відображатимуться розміри файлів.\n"
+"\n"
+"\t• <b>Двійкові одиниці:</b> відповідає двійковим префіксам МЕК <i>(напр.: 1 "
+"КіБ = 1024 байти)</i>\n"
+"\t• <b>Десяткові одиниці:</b> відповідає десятковим префіксам SI <i>(напр.: "
+"1 кБ = 1000 байтів)</i>"
 
-#: src/preferences.ui:1070
+#: src/preferences.ui:1178
 msgid ""
 "<b>Remember window size:</b>\n"
 "\n"
@@ -639,8 +673,15 @@ msgid ""
 "Note that some window managers ignore this request and force the window to "
 "have a different size."
 msgstr ""
+"<b>Памʼятати розмір вікна:</b>\n"
+"\n"
+"Якщо ввімкнено, розмір вікна відновлятиметься з попереднього сеансу коли ви "
+"відкриєте нове вікно FSearch.\n"
+"\n"
+"Зауважте, що деякі керівники вікон нехтують цим запитом і задають інший "
+"розмір вікна."
 
-#: src/preferences.ui:1088
+#: src/preferences.ui:1196
 msgid ""
 "<b>Behaviour after successfully opening a file:</b>\n"
 "\n"
@@ -657,8 +698,19 @@ msgid ""
 "\t• <b>keyboard shortcuts or menu entries</b> and/or\n"
 "\t• <b>mouse click</b>"
 msgstr ""
+"<b>Поведінка після успішного відкриття файлу:</b>\n"
+"\n"
+"Після успішного відкривання файлу/теки виконується одна з наступних дій:\n"
+"\t• <b>Нічого:</b> нічого не робити.\n"
+"\t• <b>Згорнути:</b> поточне відкрите вікно FSearch згорнеться.\n"
+"\t\tЗауважте, що не всі системи дозволяють згортати вікна.\n"
+"\t• <b>Закрити:</b> вийти з FSearch.\n"
+"\n"
+"Виконання цих дій можна налаштувати, коли файл відкривається за допомогою\n"
+"\t• <b>комбінацій клавіш або пунктів меню</b> і/або\n"
+"\t• <b>клацанням миші</b>"
 
-#: src/preferences.ui:1112
+#: src/preferences.ui:1220
 msgid ""
 "<b>Show highlighted search terms:</b>\n"
 "\n"
@@ -672,23 +724,41 @@ msgid ""
 "This also works for regular expressions and wildcard expressions starting or "
 "ending with an asterisk. "
 msgstr ""
+"<b>Виділяти пошуковий текст:</b>\n"
+"\n"
+"Якщо ввімкнено, то шуканий текст виділятиметься в списку результатів. "
+"Наприклад, якщо ви шукаєте \"foo\", всі видимі <i>foo</i> в назвах файлів/"
+"каталогів виділятимуться жирним шрифтом:\n"
+"\n"
+"\t\t<b>foo</b>bar.txt\n"
+"\t\tfile.<b>foo</b>\n"
+"\n"
+"Це також працює з регулярними виразами і шаблонами, що починаються і "
+"закінчуються на знак зірочки. "
 
-#: src/preferences.ui:1133
+#: src/preferences.ui:1241
 msgid ""
 "<b>Show tooltips:</b>\n"
 "\n"
 "If enabled, the results view will show the full path of the focused file/"
 "folder in a small tooltip window."
 msgstr ""
+"<b>Показувати підказки:</b>\n"
+"\n"
+"Якщо ввімкнено, то при наведенні курсора на файл/теку в списку результатів "
+"появиться підказка з повним шляхом файлу."
 
-#: src/preferences.ui:1149
+#: src/preferences.ui:1257
 msgid ""
 "<b>Show icons in name column:</b>\n"
 "\n"
 "If enabled, file/folder icons will be shown in the name column."
 msgstr ""
+"<b>Показувати значки в стовпці назви:</b>\n"
+"\n"
+"Якщо ввімкнено, в стовпці з назвою відображатимуться значки файлів/тек."
 
-#: src/preferences.ui:1165
+#: src/preferences.ui:1273
 msgid ""
 "<b>Remember column configuration:</b>\n"
 "\n"
@@ -696,23 +766,35 @@ msgid ""
 "session will be restored when you open an FSearch window. This includes the "
 "size and visibility of all columns."
 msgstr ""
+"<b>Памʼятати налаштування стовпців:</b>\n"
+"\n"
+"Якщо ввімкнено, налаштування стовпців списку результатів відновлятимуться з "
+"попереднього сеансу коли ви відкриєте нове вікно FSearch. Сюди входять "
+"розмір і вигляд усіх стовпців."
 
-#: src/preferences.ui:1181
+#: src/preferences.ui:1289
 msgid ""
 "<b>Remember sort order:</b>\n"
 "\n"
 "If enabled, the sort order of the results view from the previous session "
 "will be restored when you open an FSearch window."
 msgstr ""
+"<b>Памʼятати порядок сортування:</b>\n"
+"\n"
+"Якщо ввімкнено, порядок сортування списку результатів відновлятиметься з "
+"попереднього сеансу коли ви відкриватимете нове вікно FSearch."
 
-#: src/preferences.ui:1197
+#: src/preferences.ui:1305
 msgid ""
 "<b>Open path with double click in path column:</b>\n"
 "\n"
 "If enabled, double clicking in the path column will open the selected path."
 msgstr ""
+"<b>Відкривати подвійним клацанням у стовпці шляху:</b>\n"
+"\n"
+"Якщо ввімкнено, подвійне клацання в стовпці шляху відкриватиме вибраний шлях."
 
-#: src/preferences.ui:1213
+#: src/preferences.ui:1321
 msgid ""
 "<b>Single click to open:</b>\n"
 "\n"
@@ -720,16 +802,24 @@ msgid ""
 "want to select a file/folder while this setting is active, you need to a "
 "hold <i>Ctrl</i> at the same time while clicking the file/folder."
 msgstr ""
+"<b>Відкривати одним клацанням:</b>\n"
+"\n"
+"Якщо ввімкнено, одинарне клацання відкриватиме вибраний файл/каталог. Якщо "
+"ви хочете виділити файл/каталог, клацніть по них утримуючи клавішу "
+"<i>Ctrl</i>."
 
-#: src/preferences.ui:1229
+#: src/preferences.ui:1337
 msgid ""
 "<b>Show database indexing status:</b>\n"
 "\n"
 "If enabled, the path that is currently being indexed is displayed in the "
 "statusbar."
 msgstr ""
+"<b>Показувати стан індексування бази даних:</b>\n"
+"\n"
+"Якщо ввімкнено, шлях, що зараз індексується відображатиметься в рядку стану."
 
-#: src/preferences.ui:1245
+#: src/preferences.ui:1353
 msgid ""
 "<b>Show warning dialogs:</b>\n"
 "\n"
@@ -737,16 +827,25 @@ msgid ""
 "\n"
 "\t•  a file or folder failed to open\n"
 msgstr ""
+"<b>Показувати вікна попереджень:</b>\n"
+"\n"
+"Якщо ввімкнено, то вікна попереджень появлятимуться коли:\n"
+"\n"
+"\t•  не вдалося відкрити файл чи каталог\n"
 
-#: src/preferences.ui:1264
+#: src/preferences.ui:1372
 msgid ""
 "<b>Search in path when query contains path separators:</b>\n"
 "\n"
 "If enabled, search terms containing path separators (i.e. \"/\") will be "
 "automatically matched against the full path of a file or folder."
 msgstr ""
+"<b>Шукати по шляху, якщо запит містить роздільники:</b>\n"
+"\n"
+"Якщо ввімкнено, пошуковий запит, який містить роздільники (як-от \"/\") "
+"автоматично зіставлятиметься з повним шляхом файлу або теки."
 
-#: src/preferences.ui:1280
+#: src/preferences.ui:1388
 msgid ""
 "<b>Match case when query contains at least one upper case character:</b>\n"
 "\n"
@@ -754,8 +853,15 @@ msgid ""
 "trigger a case-sensitive search. This means a search term like <i>Foo</i> "
 "will match <i>FooBar.txt</i> but not <i>foobar.txt</i>."
 msgstr ""
+"<b>Враховувати регістр, якщо запит містить принаймні один символ верхнього "
+"регістру:</b>\n"
+"\n"
+"Якщо ввімкнено, пошуковий запит, що містить принаймні один символ верхнього "
+"регістру перемикається на чутливий до регістру пошук. Це означає, що запити "
+"на кшталт <i>Foo</i> зіставлятимуться з <i>FooBar.txt</i>, але не з <i>foobar"
+".txt</i>."
 
-#: src/preferences.ui:1296
+#: src/preferences.ui:1404
 msgid ""
 "<b>Hide results when search is empty:</b>\n"
 "\n"
@@ -764,8 +870,14 @@ msgid ""
 "If disabled, all files and folders will be displayed when the search entry "
 "is empty."
 msgstr ""
+"<b>Ховати результати, якщо пошукове поле порожнє:</b>\n"
+"\n"
+"Якщо ввімкнено і пошукове поле порожнє, то результати пошуку будуть "
+"відсутніми.\n"
+"\n"
+"Якщо вимкнено і пошукове поле порожнє, відображатимуться всі фали і каталоги."
 
-#: src/preferences.ui:1314
+#: src/preferences.ui:1422
 msgid ""
 "<b>Search as you type:</b>\n"
 "\n"
@@ -774,8 +886,15 @@ msgid ""
 "If disabled, the search is only updated when you hit <i>Enter</i> or press "
 "the search button. "
 msgstr ""
+"<b>Шукати під час набору:</b>\n"
+"\n"
+"Якщо ввімкнено, пошук самостійно оновлятиметься під час кожного натискання "
+"клавіші.\n"
+"\n"
+"Якщо вимкнено, пошук оновиться лише коли ви натиснете <i>Enter</i> або "
+"кнопку пошуку. "
 
-#: src/preferences.ui:1332
+#: src/preferences.ui:1440
 msgid ""
 "<b>Limit number of results:</b>\n"
 "\n"
@@ -785,16 +904,28 @@ msgid ""
 "Displaying lots of results has a significant performance impact, especially "
 "when the list isn't sorted by name. This will be improved in future versions."
 msgstr ""
+"<b>Обмежити кількість результатів:</b>\n"
+"\n"
+"Якщо ввімкнено, кількість виведених пошукових результатів буде обмежено до "
+"визначеного числа.\n"
+"\n"
+"Відображення великої кількості результатів негативно впливає продуктивність, "
+"особливо коли список не сортується за назвою. Це виправиться в подальших "
+"версіях."
 
-#: src/preferences.ui:1350
+#: src/preferences.ui:1458
 msgid ""
 "<b>Update database on start:</b>\n"
 "\n"
 "If enabled, the database will be updated automatically in the background "
 "when you start FSearch."
 msgstr ""
+"<b>Оновляти базу під час запуску:</b>\n"
+"\n"
+"Якщо ввімкнено, база даних оновлятиметься самостійно у фоновому режимі коли "
+"ви запускатимете FSearch."
 
-#: src/preferences.ui:1366
+#: src/preferences.ui:1474
 msgid ""
 "<b>Included folders:</b>\n"
 "\n"
@@ -808,23 +939,40 @@ msgid ""
 "\t\t\tupdated <i>(e.g. a path to a slow USB drive which doesn't change "
 "often)</i>"
 msgstr ""
+"<b>Враховані каталоги:</b>\n"
+"\n"
+"Даний список містить усі каталоги, які ви хочете включити до бази даних.\n"
+"\n"
+"\t• <b>Активний:</b> якщо дозволено, шлях враховуватиметься під час пошуку.\n"
+"\t• <b>Шлях:</b> повний шлях, який потрібно враховувати.\n"
+"\t• <b>Оновляти:</b> це налаштування корисне, якщо ви бажаєте виключити "
+"певний шлях з періодичного\n"
+"\t\t\tоновлення <i>(напр., якщо шлях належить повільному USB-пристрою, який "
+"рідко змінюється)</i>"
 
-#: src/preferences.ui:1387
+#: src/preferences.ui:1495
 msgid ""
 "<b>Add folder to database:</b>\n"
 "\n"
 "This button opens a dialog where you can select a folder you want to include "
 "in the database for searching."
 msgstr ""
+"<b>Додати каталог до бази даних:</b>\n"
+"\n"
+"Ця кнопка відкриває діалогове вікно, в якому ви маєте обрати каталог, який "
+"хочете включити до бази даних пошуку."
 
-#: src/preferences.ui:1403
+#: src/preferences.ui:1511
 msgid ""
 "<b>Remove selected row:</b>\n"
 "\n"
 "This removes the selected folder from the list of included folders."
 msgstr ""
+"<b>Вилучити вибраний рядок:</b>\n"
+"\n"
+"Вилучає вибраний каталог зі списку врахованих каталогів."
 
-#: src/preferences.ui:1419
+#: src/preferences.ui:1527
 msgid ""
 "<b>Excluded folders:</b>\n"
 "\n"
@@ -834,23 +982,37 @@ msgid ""
 "\t\t and can't be searched in.\n"
 "\t• <b>Path:</b> The full path to be excluded."
 msgstr ""
+"<b>Виключені каталоги:</b>\n"
+"\n"
+"Даний список містить усі каталоги, які ви бажаєте виключити з бази даних.\n"
+"\n"
+"\t• <b>Активний:</b> якщо ввімкнено, шлях не враховуватиметься під\n"
+"\t\tчас пошуку.\n"
+"\t• <b>Шлях:</b> повний шлях, який буде виключено."
 
-#: src/preferences.ui:1439
+#: src/preferences.ui:1547
 msgid ""
 "<b>Exclude folder from database:</b>\n"
 "\n"
 "This button opens a dialog where you can select a folder you want to exclude "
 "from the database."
 msgstr ""
+"<b>Виключити каталог з бази даних:</b>\n"
+"\n"
+"Ця кнопка відкриває діалогове вікно, в якому ви можете вибрати каталог, який "
+"бажаєте виключити з бази даних."
 
-#: src/preferences.ui:1455
+#: src/preferences.ui:1563
 msgid ""
 "<b>Remove selected row:</b>\n"
 "\n"
 "This removes the selected folder from the list of excluded folders."
 msgstr ""
+"<b>Вилучити вибраний рядок:</b>\n"
+"\n"
+"Вилучає вибраний каталог зі списку виключених каталогів."
 
-#: src/preferences.ui:1471
+#: src/preferences.ui:1579
 msgid ""
 "<b>Exclude files and folders from database:</b>\n"
 "\n"
@@ -859,41 +1021,70 @@ msgid ""
 "all files or folders which are called either <i>.git</i> or <i>.cache</i> or "
 "end with <i>.swp</i>."
 msgstr ""
+"<b>Виключити файли і каталоги з бази даних:</b>\n"
+"\n"
+"Це розділений крапкою з комою список файлів (чи каталогів), які ви бажаєте "
+"виключити з бази даних. Наприклад, <i>.git;.cache;*.swp</i> не враховуватиме "
+"всі файли чи каталоги, що мають у назві <i>.git</i> або <i>.cache</i>, або "
+"закінчується на <i>.swp</i>."
 
-#: src/preferences.ui:1487
+#: src/preferences.ui:1595
 msgid ""
 "<b>Exclude hidden files and folders:</b>\n"
 "\n"
 "If enabled, hidden files and folders will be excluded from the database "
 "<i>(i.e. all files or folders which start with a dot character)</i>."
 msgstr ""
+"<b>Не враховувати приховані файли і каталоги:</b>\n"
+"\n"
+"Якщо ввімкнено, приховані файли і каталоги виключатимуться з бази даних "
+"<i>(як-от: усі файли і каталоги, що починаються зі знака крапки)</i>."
 
-#: src/preferences.ui:1503
+#: src/preferences.ui:1611
 msgid "Focus a setting to get a detailed description of what it does."
-msgstr ""
+msgstr "Наведіть вказівник на налаштування, щоб отримати докладний опис."
 
-#: src/preferences.ui:1515
-msgid "label"
+#: src/preferences.ui:1623
+msgid ""
+"<b>Periodically update database at a specific time interval:</b>\n"
+"\n"
+"If enabled and as long as FSearch is running, the database will be updated "
+"periodically with the given time interval.\n"
+"\n"
+"If you want to update the database in the background, even when FSearch is "
+"not running, you should use tools like cron or systemd timers to "
+"periodically trigger the update with:\n"
+"\n"
+"<i><tt>fsearch --update-database</tt></i>"
 msgstr ""
+"<b>Періодично оновляти базу через вказаний інтервал:</b>\n"
+"\n"
+"Якщо ввімкнено і поки працює FSearch, база даних час від часу оновлятиметься "
+"через визначений інтервал часу.\n"
+"\n"
+"Якщо ви бажаєте оновлювати базу у фоновому режимі, навіть коли FSearch "
+"працює, можете користуватися засобами, як cron або systemd timers для "
+"періодичного оновлення:\n"
+"\n"
+"<i><tt>fsearch --update-database</tt></i>"
 
-#: src/preferences.ui:1529
-#, fuzzy
+#: src/preferences.ui:1645
 msgid "Help"
-msgstr "_Довідка"
+msgstr "Довідка"
 
-#: src/preferences_ui.c:57 src/preferences_ui.c:69
+#: src/preferences_ui.c:183 src/preferences_ui.c:198
 msgid "Select folder"
-msgstr "Виберіть папку"
+msgstr "Виберіть каталог"
 
-#: src/preferences_ui.c:60 src/preferences_ui.c:69 src/preferences_ui.c:190
+#: src/preferences_ui.c:186 src/preferences_ui.c:198 src/preferences_ui.c:385
 msgid "_Cancel"
 msgstr "_Скасувати"
 
-#: src/preferences_ui.c:62 src/preferences_ui.c:69
+#: src/preferences_ui.c:188 src/preferences_ui.c:198
 msgid "_Select"
 msgstr "_Вибрати"
 
-#: src/preferences_ui.c:191
+#: src/preferences_ui.c:386
 msgid "_OK"
 msgstr "_Прийняти"
 
@@ -910,7 +1101,17 @@ msgstr ""
 msgid ""
 "search;fsearch;files;folders;music;video;documents;find;tool;everything;"
 msgstr ""
-"search;fsearch;files;folders;music;video;documents;find;tool;everything;"
+"пошук;fsearch;файли;каталоги;музика;відео;документи;шукати;засіб;everything;"
+
+#~ msgid "Background tasks are active."
+#~ msgstr "Виконуються фонові завдання."
+
+#~ msgid ""
+#~ "Closing the window isn't possible right now.\n"
+#~ "Please wait a moment and then try again."
+#~ msgstr ""
+#~ "Закриття вікна зараз неможливе.\n"
+#~ "Зачекайте та повторіть спробу."
 
 #~ msgid "Go to <b>Edit → Preferences → Database</b> and add some locations"
 #~ msgstr ""
