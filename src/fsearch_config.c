@@ -16,18 +16,18 @@
    along with this program; if not, see <http://www.gnu.org/licenses/>.
    */
 
+#define G_LOG_DOMAIN "fsearch-config"
+
 #include <glib.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "debug.h"
 #include "fsearch_config.h"
 #include "fsearch_exclude_path.h"
-#include "fsearch_include_path.h"
+#include "fsearch_index.h"
 #include "fsearch_limits.h"
-#include "fsearch_timer.h"
 
 const char *config_file_name = "fsearch.conf";
 const char *config_folder_name = "fsearch";
@@ -110,7 +110,7 @@ config_load_string(GKeyFile *key_file, const char *group_name, const char *key, 
 }
 
 static GList *
-config_load_include_locations(GKeyFile *key_file, GList *locations, const char *prefix) {
+config_load_indexes(GKeyFile *key_file, GList *indexes, const char *prefix) {
     uint32_t pos = 1;
     while (true) {
         char key[100] = "";
@@ -120,19 +120,17 @@ config_load_include_locations(GKeyFile *key_file, GList *locations, const char *
         bool enabled = config_load_boolean(key_file, "Database", key, true);
         snprintf(key, sizeof(key), "%s_update_%d", prefix, pos);
         bool update = config_load_boolean(key_file, "Database", key, true);
-        snprintf(key, sizeof(key), "%s_num_items_%d", prefix, pos);
-        bool num_items = config_load_integer(key_file, "Database", key, 0);
 
         pos++;
         if (path) {
-            FsearchIncludePath *fs_path = fsearch_include_path_new(path, enabled, update, num_items, 0);
-            locations = g_list_append(locations, fs_path);
+            FsearchIndex *index = fsearch_index_new(FSEARCH_INDEX_FOLDER_TYPE, path, enabled, update, 0);
+            indexes = g_list_append(indexes, index);
         }
         else {
             break;
         }
     }
-    return locations;
+    return indexes;
 }
 
 static GList *
@@ -165,13 +163,17 @@ config_load(FsearchConfig *config) {
     GKeyFile *key_file = g_key_file_new();
     g_assert(key_file != NULL);
 
-    GTimer *timer = fsearch_timer_start();
+    GTimer *timer = g_timer_new();
+    g_timer_start(timer);
+
     gchar config_path[PATH_MAX] = "";
     config_build_path(config_path, sizeof(config_path));
 
+    const char *debug_message = NULL;
+
     GError *error = NULL;
     if (g_key_file_load_from_file(key_file, config_path, G_KEY_FILE_NONE, &error)) {
-        trace("[config] loading...\n");
+        g_debug("[config] loading...");
         // Interface
         config->highlight_search_terms = config_load_boolean(key_file, "Interface", "highlight_search_terms", true);
         config->single_click_open = config_load_boolean(key_file, "Interface", "single_click_open", false);
@@ -207,11 +209,22 @@ config_load(FsearchConfig *config) {
         config->window_height = config_load_integer(key_file, "Interface", "window_height", 600);
 
         // Columns
-        config->show_listview_icons = config_load_boolean(key_file, "Interface", "show_listview_icons", true);
-        config->show_path_column = config_load_boolean(key_file, "Interface", "show_path_column", true);
-        config->show_type_column = config_load_boolean(key_file, "Interface", "show_type_column", true);
-        config->show_size_column = config_load_boolean(key_file, "Interface", "show_size_column", true);
-        config->show_modified_column = config_load_boolean(key_file, "Interface", "show_modified_column", true);
+        if (config->restore_column_config) {
+            config->show_listview_icons = config_load_boolean(key_file, "Interface", "show_listview_icons", true);
+            config->show_path_column = config_load_boolean(key_file, "Interface", "show_path_column", true);
+            config->show_type_column = config_load_boolean(key_file, "Interface", "show_type_column", false);
+            config->show_extension_column = config_load_boolean(key_file, "Interface", "show_extension_column", true);
+            config->show_size_column = config_load_boolean(key_file, "Interface", "show_size_column", true);
+            config->show_modified_column = config_load_boolean(key_file, "Interface", "show_modified_column", true);
+        }
+        else {
+            config->show_listview_icons = true;
+            config->show_path_column = true;
+            config->show_type_column = false;
+            config->show_extension_column = true;
+            config->show_size_column = true;
+            config->show_modified_column = true;
+        }
 
         // Column Sort
         config->sort_ascending = config_load_boolean(key_file, "Interface", "sort_ascending", true);
@@ -220,6 +233,7 @@ config_load(FsearchConfig *config) {
         // Column Size
         config->name_column_width = config_load_integer(key_file, "Interface", "name_column_width", 250);
         config->path_column_width = config_load_integer(key_file, "Interface", "path_column_width", 250);
+        config->extension_column_width = config_load_integer(key_file, "Interface", "extension_column_width", 100);
         config->type_column_width = config_load_integer(key_file, "Interface", "type_column_width", 100);
         config->size_column_width = config_load_integer(key_file, "Interface", "size_column_width", 75);
         config->modified_column_width = config_load_integer(key_file, "Interface", "modified_column_width", 75);
@@ -240,8 +254,6 @@ config_load(FsearchConfig *config) {
         config->search_in_path = config_load_boolean(key_file, "Search", "search_in_path", false);
         config->hide_results_on_empty_search =
             config_load_boolean(key_file, "Search", "hide_results_on_empty_search", true);
-        config->limit_results = config_load_boolean(key_file, "Search", "limit_results", false);
-        config->num_results = config_load_integer(key_file, "Search", "num_results", 1000);
 
         // Database
         config->update_database_on_launch =
@@ -262,17 +274,23 @@ config_load(FsearchConfig *config) {
             exclude_files_str = NULL;
         }
 
-        config->locations = config_load_include_locations(key_file, config->locations, "location");
+        config->indexes = config_load_indexes(key_file, config->indexes, "location");
         config->exclude_locations =
             config_load_exclude_locations(key_file, config->exclude_locations, "exclude_location");
 
         result = true;
-        fsearch_timer_stop(timer, "[config] loaded in %f ms\n");
+        debug_message = "[config] loaded in %f ms";
     }
     else {
-        fsearch_timer_stop(timer, "[config] loading failed (%f ms)\n");
+        debug_message = "[config] loading failed (%f ms)";
         g_error_free(error);
     }
+    g_timer_stop(timer);
+    const double seconds = g_timer_elapsed(timer, NULL);
+    g_timer_destroy(timer);
+    timer = NULL;
+
+    g_debug(debug_message, seconds * 1000);
 
     g_key_file_free(key_file);
     return result;
@@ -290,8 +308,6 @@ config_load_default(FsearchConfig *config) {
     config->enable_regex = false;
     config->search_in_path = false;
     config->hide_results_on_empty_search = true;
-    config->limit_results = true;
-    config->num_results = 1000;
 
     // Interface
     config->single_click_open = false;
@@ -314,7 +330,8 @@ config_load_default(FsearchConfig *config) {
     // Columns
     config->show_listview_icons = true;
     config->show_path_column = true;
-    config->show_type_column = true;
+    config->show_type_column = false;
+    config->show_extension_column = false;
     config->show_size_column = true;
     config->show_modified_column = true;
 
@@ -329,6 +346,7 @@ config_load_default(FsearchConfig *config) {
 
     config->name_column_width = 250;
     config->path_column_width = 250;
+    config->extension_column_width = 100;
     config->type_column_width = 100;
     config->size_column_width = 75;
     config->modified_column_width = 125;
@@ -350,39 +368,36 @@ config_load_default(FsearchConfig *config) {
     config->follow_symlinks = false;
 
     // Locations
-    config->locations = NULL;
-    FsearchIncludePath *fs_path = fsearch_include_path_new(g_get_home_dir(), true, true, 0, 0);
-    config->locations = g_list_append(config->locations, fs_path);
+    config->indexes = NULL;
+    FsearchIndex *index = fsearch_index_new(FSEARCH_INDEX_FOLDER_TYPE, g_get_home_dir(), true, true, 0);
+    config->indexes = g_list_append(config->indexes, index);
     config->exclude_locations = NULL;
 
     return true;
 }
 
 static void
-config_save_include_locations(GKeyFile *key_file, GList *locations, const char *prefix) {
-    if (!locations) {
+config_save_indexes(GKeyFile *key_file, GList *indexes, const char *prefix) {
+    if (!indexes) {
         return;
     }
 
     uint32_t pos = 1;
-    for (GList *l = locations; l != NULL; l = l->next) {
-        FsearchIncludePath *fs_path = l->data;
-        if (!fs_path) {
+    for (GList *l = indexes; l != NULL; l = l->next) {
+        FsearchIndex *index = l->data;
+        if (!index) {
             continue;
         }
 
         char key[100] = "";
         snprintf(key, sizeof(key), "%s_%d", prefix, pos);
-        g_key_file_set_string(key_file, "Database", key, fs_path->path);
+        g_key_file_set_string(key_file, "Database", key, index->path);
 
         snprintf(key, sizeof(key), "%s_enabled_%d", prefix, pos);
-        g_key_file_set_boolean(key_file, "Database", key, fs_path->enabled);
+        g_key_file_set_boolean(key_file, "Database", key, index->enabled);
 
         snprintf(key, sizeof(key), "%s_update_%d", prefix, pos);
-        g_key_file_set_boolean(key_file, "Database", key, fs_path->update);
-
-        snprintf(key, sizeof(key), "%s_num_items_%d", prefix, pos);
-        g_key_file_set_integer(key_file, "Database", key, fs_path->num_items);
+        g_key_file_set_boolean(key_file, "Database", key, index->update);
 
         pos++;
     }
@@ -396,17 +411,17 @@ config_save_exclude_locations(GKeyFile *key_file, GList *locations, const char *
 
     uint32_t pos = 1;
     for (GList *l = locations; l != NULL; l = l->next) {
-        FsearchExcludePath *fs_path = l->data;
-        if (!fs_path) {
+        FsearchExcludePath *index = l->data;
+        if (!index) {
             continue;
         }
 
         char key[100] = "";
         snprintf(key, sizeof(key), "%s_%d", prefix, pos);
-        g_key_file_set_string(key_file, "Database", key, fs_path->path);
+        g_key_file_set_string(key_file, "Database", key, index->path);
 
         snprintf(key, sizeof(key), "%s_enabled_%d", prefix, pos);
-        g_key_file_set_boolean(key_file, "Database", key, fs_path->enabled);
+        g_key_file_set_boolean(key_file, "Database", key, index->enabled);
 
         pos++;
     }
@@ -420,8 +435,11 @@ config_save(FsearchConfig *config) {
     GKeyFile *key_file = g_key_file_new();
     g_assert(key_file != NULL);
 
-    GTimer *timer = fsearch_timer_start();
-    trace("[config] saving...\n");
+    GTimer *timer = g_timer_new();
+    g_timer_start(timer);
+
+    g_debug("[config] saving...");
+
     // Interface
     g_key_file_set_boolean(key_file, "Interface", "single_click_open", config->single_click_open);
     g_key_file_set_boolean(key_file, "Interface", "highlight_search_terms", config->highlight_search_terms);
@@ -455,6 +473,7 @@ config_save(FsearchConfig *config) {
     g_key_file_set_boolean(key_file, "Interface", "show_listview_icons", config->show_listview_icons);
     g_key_file_set_boolean(key_file, "Interface", "show_path_column", config->show_path_column);
     g_key_file_set_boolean(key_file, "Interface", "show_type_column", config->show_type_column);
+    g_key_file_set_boolean(key_file, "Interface", "show_extension_column", config->show_extension_column);
     g_key_file_set_boolean(key_file, "Interface", "show_size_column", config->show_size_column);
     g_key_file_set_boolean(key_file, "Interface", "show_modified_column", config->show_modified_column);
 
@@ -466,6 +485,7 @@ config_save(FsearchConfig *config) {
     // Column width
     g_key_file_set_integer(key_file, "Interface", "name_column_width", config->name_column_width);
     g_key_file_set_integer(key_file, "Interface", "path_column_width", config->path_column_width);
+    g_key_file_set_integer(key_file, "Interface", "extension_column_width", config->extension_column_width);
     g_key_file_set_integer(key_file, "Interface", "type_column_width", config->type_column_width);
     g_key_file_set_integer(key_file, "Interface", "size_column_width", config->size_column_width);
     g_key_file_set_integer(key_file, "Interface", "modified_column_width", config->modified_column_width);
@@ -490,8 +510,6 @@ config_save(FsearchConfig *config) {
     g_key_file_set_boolean(key_file, "Search", "enable_regex", config->enable_regex);
     g_key_file_set_boolean(key_file, "Search", "match_case", config->match_case);
     g_key_file_set_boolean(key_file, "Search", "hide_results_on_empty_search", config->hide_results_on_empty_search);
-    g_key_file_set_boolean(key_file, "Search", "limit_results", config->limit_results);
-    g_key_file_set_integer(key_file, "Search", "num_results", config->num_results);
 
     // Database
     g_key_file_set_boolean(key_file, "Database", "update_database_on_launch", config->update_database_on_launch);
@@ -504,7 +522,7 @@ config_save(FsearchConfig *config) {
     g_key_file_set_boolean(key_file, "Database", "exclude_hidden_files_and_folders", config->exclude_hidden_items);
     g_key_file_set_boolean(key_file, "Database", "follow_symbolic_links", config->follow_symlinks);
 
-    config_save_include_locations(key_file, config->locations, "location");
+    config_save_indexes(key_file, config->indexes, "location");
     config_save_exclude_locations(key_file, config->exclude_locations, "exclude_location");
 
     if (config->exclude_files) {
@@ -516,14 +534,22 @@ config_save(FsearchConfig *config) {
     gchar config_path[PATH_MAX] = "";
     config_build_path(config_path, sizeof(config_path));
 
+    const char *debug_message = NULL;
     GError *error = NULL;
     if (g_key_file_save_to_file(key_file, config_path, &error)) {
-        fsearch_timer_stop(timer, "[config] saved in %f ms\n");
+        debug_message = "[config] saved in %f ms";
         result = true;
     }
     else {
-        fsearch_timer_stop(timer, "[config] saving failed (%f ms)\n");
+        debug_message = "[config] saving failed (%f ms)";
     }
+
+    g_timer_stop(timer);
+    const double seconds = g_timer_elapsed(timer, NULL);
+    g_timer_destroy(timer);
+    timer = NULL;
+
+    g_debug(debug_message, seconds * 1000);
 
     g_key_file_free(key_file);
     return result;
@@ -531,6 +557,9 @@ config_save(FsearchConfig *config) {
 
 static bool
 config_excludes_compare(void *e1, void *e2) {
+    if (!e1 && !e2) {
+        return true;
+    }
     if (!e1 || !e2) {
         return false;
     }
@@ -547,20 +576,23 @@ config_excludes_compare(void *e1, void *e2) {
 }
 
 static bool
-config_includes_compare(void *i1, void *i2) {
+config_indexes_compare(void *i1, void *i2) {
+    if (!i1 && !i2) {
+        return true;
+    }
     if (!i1 || !i2) {
         return false;
     }
-    FsearchIncludePath *path1 = i1;
-    FsearchIncludePath *path2 = i2;
+    FsearchIndex *index1 = i1;
+    FsearchIndex *index2 = i2;
 
-    if (path1->enabled != path2->enabled) {
+    if (index1->enabled != index2->enabled) {
         return false;
     }
-    if (path1->update != path2->update) {
+    if (index1->update != index2->update) {
         return false;
     }
-    if (g_strcmp0(path1->path, path2->path) != 0) {
+    if (g_strcmp0(index1->path, index2->path) != 0) {
         return false;
     }
     return true;
@@ -568,6 +600,9 @@ config_includes_compare(void *i1, void *i2) {
 
 static bool
 config_list_compare(GList *l1, GList *l2, bool (*cmp_func)(void *, void *)) {
+    if (!l1 && !l2) {
+        return true;
+    }
     if (!l1 || !l2) {
         return false;
     }
@@ -609,15 +644,14 @@ FsearchConfigCompareResult
 config_cmp(FsearchConfig *c1, FsearchConfig *c2) {
     FsearchConfigCompareResult result = {};
 
-    if (c1->hide_results_on_empty_search != c2->hide_results_on_empty_search || c1->limit_results != c2->limit_results
+    if (c1->hide_results_on_empty_search != c2->hide_results_on_empty_search
         || c1->auto_search_in_path != c2->auto_search_in_path || c1->auto_match_case != c2->auto_match_case
         || c1->search_as_you_type != c2->search_as_you_type || c1->search_in_path != c2->search_in_path
-        || c1->enable_regex != c2->enable_regex || c1->match_case != c2->match_case
-        || c1->num_results != c2->num_results) {
+        || c1->enable_regex != c2->enable_regex || c1->match_case != c2->match_case) {
         result.search_config_changed = true;
     }
     if (c1->highlight_search_terms != c2->highlight_search_terms || c1->show_listview_icons != c2->show_listview_icons
-        || c1->single_click_open != c2->single_click_open) {
+        || c1->single_click_open != c2->single_click_open || c1->enable_list_tooltips != c2->enable_list_tooltips) {
         result.listview_config_changed = true;
     }
 
@@ -630,12 +664,12 @@ config_cmp(FsearchConfig *c1, FsearchConfig *c2) {
         exclude_files_changed = true;
     }
 
-    bool include_locations_changed = !config_list_compare(c1->locations, c2->locations, config_includes_compare);
+    bool indexes_changed = !config_list_compare(c1->indexes, c2->indexes, config_indexes_compare);
     bool exclude_locations_changed =
         !config_list_compare(c1->exclude_locations, c2->exclude_locations, config_excludes_compare);
 
     if (c1->exclude_hidden_items != c2->exclude_hidden_items || exclude_files_changed || exclude_locations_changed
-        || include_locations_changed) {
+        || indexes_changed) {
         result.database_config_changed = true;
     }
 
@@ -655,8 +689,8 @@ config_copy(FsearchConfig *config) {
     if (config->sort_by) {
         copy->sort_by = g_strdup(config->sort_by);
     }
-    if (config->locations) {
-        copy->locations = g_list_copy_deep(config->locations, (GCopyFunc)fsearch_include_path_copy, NULL);
+    if (config->indexes) {
+        copy->indexes = g_list_copy_deep(config->indexes, (GCopyFunc)fsearch_index_copy, NULL);
     }
     if (config->exclude_locations) {
         copy->exclude_locations =
@@ -680,9 +714,9 @@ config_free(FsearchConfig *config) {
         free(config->sort_by);
         config->sort_by = NULL;
     }
-    if (config->locations) {
-        g_list_free_full(config->locations, (GDestroyNotify)fsearch_include_path_free);
-        config->locations = NULL;
+    if (config->indexes) {
+        g_list_free_full(config->indexes, (GDestroyNotify)fsearch_index_free);
+        config->indexes = NULL;
     }
     if (config->exclude_locations) {
         g_list_free_full(config->exclude_locations, (GDestroyNotify)fsearch_exclude_path_free);

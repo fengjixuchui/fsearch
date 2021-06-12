@@ -1,5 +1,7 @@
 # Build files
 Makefile.in
+/build
+/builddir
 /Makefile
 /data/Makefile
 /data/fsearch.desktop
@@ -28,6 +30,7 @@ Makefile.in
 .deps
 /.version
 /config.h*
+fsearch*-dirty
 
 # Project files
 tags
@@ -39,6 +42,12 @@ src/tags
 src/fsearch.glade~
 src/*.ui~
 
+# Valgrind
+callgrind.out*
+
+# VS Code
+*.vscode
+
 # QtCreator Files
 *.config
 *.creator
@@ -46,9 +55,13 @@ src/*.ui~
 *.includes
 
 # VIM files
+.vim
 *.swp
 compile_commands.json
 *.ycm_extra_conf*
+
+#idea
+.idea
 
 # Object files
 *.o
@@ -97,7 +110,7 @@ config.sub
 m4/
 po/Makevars.template
 po/POTFILES
-po/Rules-quot
+po/Rules-quot*
 po/boldquot.sed
 po/en@boldquot.header
 po/en@quot.header
@@ -107,3 +120,8 @@ po/remove-potcdate.sed
 po/remove-potcdate.sin
 po/stamp-po 
 po/stamp-it 
+/.idea_save/modules.xml
+/.idea_save/fsearch.iml
+/.idea_save/misc.xml
+/.idea_save/vcs.xml
+/.idea_save/.gitignore

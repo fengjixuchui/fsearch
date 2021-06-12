@@ -16,9 +16,10 @@
    along with this program; if not, see <http://www.gnu.org/licenses/>.
    */
 
+#define G_LOG_DOMAIN "fsearch-thread-pool"
+
 #include <stdio.h>
 
-#include "debug.h"
 #include "fsearch_thread_pool.h"
 
 struct _FsearchThreadPool {
@@ -28,7 +29,7 @@ struct _FsearchThreadPool {
 
 typedef struct thread_context_s {
     GThread *thread;
-    gpointer (*thread_func)(gpointer thread_data);
+    FsearchThreadPoolFunc thread_func;
 
     gpointer *thread_data;
 
@@ -79,7 +80,7 @@ thread_context_free(thread_context_t *ctx) {
 
     g_mutex_lock(&ctx->mutex);
     if (ctx->thread_data) {
-        trace("[thread_pool] search data still there\n");
+        g_debug("[thread_pool] search data still there");
     }
 
     // terminate thread
@@ -207,9 +208,9 @@ fsearch_thread_pool_wait_for_thread(FsearchThreadPool *pool, GList *thread) {
     thread_context_t *ctx = thread->data;
     g_mutex_lock(&ctx->mutex);
     while (fsearch_thread_pool_task_is_busy(pool, thread)) {
-        trace("[thread_pool] busy, waiting...\n");
+        g_debug("[thread_pool] busy, waiting...");
         g_cond_wait(&ctx->finished_cond, &ctx->mutex);
-        trace("[thread_pool] continue...\n");
+        g_debug("[thread_pool] continue...");
     }
     g_mutex_unlock(&ctx->mutex);
     return true;
@@ -224,7 +225,10 @@ fsearch_thread_pool_get_num_threads(FsearchThreadPool *pool) {
 }
 
 bool
-fsearch_thread_pool_push_data(FsearchThreadPool *pool, GList *thread, ThreadFunc thread_func, gpointer thread_data) {
+fsearch_thread_pool_push_data(FsearchThreadPool *pool,
+                              GList *thread,
+                              FsearchThreadPoolFunc thread_func,
+                              gpointer thread_data) {
     if (!pool || !thread || !thread_func || !thread_data) {
         return false;
     }

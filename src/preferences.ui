@@ -32,11 +32,6 @@
     <property name="can-focus">False</property>
     <property name="icon-name">list-remove-symbolic</property>
   </object>
-  <object class="GtkAdjustment" id="limit_num_results_adjustment">
-    <property name="upper">1000000</property>
-    <property name="step-increment">1</property>
-    <property name="page-increment">10</property>
-  </object>
   <object class="GtkAdjustment" id="minute_adjustment">
     <property name="upper">59</property>
     <property name="value">30</property>
@@ -599,7 +594,7 @@
               </packing>
             </child>
             <child>
-              <!-- n-columns=2 n-rows=5 -->
+              <!-- n-columns=2 n-rows=4 -->
               <object class="GtkGrid">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
@@ -609,36 +604,6 @@
                 <property name="margin-bottom">6</property>
                 <property name="row-spacing">2</property>
                 <property name="column-spacing">6</property>
-                <child>
-                  <object class="GtkCheckButton" id="limit_num_results_button">
-                    <property name="label" translatable="yes">Limit number of results:</property>
-                    <property name="visible">True</property>
-                    <property name="can-focus">True</property>
-                    <property name="receives-default">False</property>
-                    <property name="has-tooltip">True</property>
-                    <property name="halign">end</property>
-                    <property name="draw-indicator">True</property>
-                  </object>
-                  <packing>
-                    <property name="left-attach">0</property>
-                    <property name="top-attach">4</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkSpinButton" id="limit_num_results_spin">
-                    <property name="visible">True</property>
-                    <property name="can-focus">True</property>
-                    <property name="has-tooltip">True</property>
-                    <property name="halign">start</property>
-                    <property name="hexpand">True</property>
-                    <property name="input-purpose">digits</property>
-                    <property name="adjustment">limit_num_results_adjustment</property>
-                  </object>
-                  <packing>
-                    <property name="left-attach">1</property>
-                    <property name="top-attach">4</property>
-                  </packing>
-                </child>
                 <child>
                   <object class="GtkCheckButton" id="auto_search_in_path_button">
                     <property name="label" translatable="yes">Search in path when query contains path separators</property>
@@ -862,7 +827,7 @@
                             <property name="vexpand">True</property>
                             <property name="shadow-type">in</property>
                             <child>
-                              <object class="GtkTreeView" id="include_list">
+                              <object class="GtkTreeView" id="index_list">
                                 <property name="visible">True</property>
                                 <property name="can-focus">True</property>
                                 <property name="has-tooltip">True</property>
@@ -884,11 +849,12 @@
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <child>
-                              <object class="GtkButton" id="include_add_button">
+                              <object class="GtkButton" id="index_add_button">
                                 <property name="visible">True</property>
                                 <property name="can-focus">True</property>
                                 <property name="receives-default">True</property>
-                                <property name="tooltip-text" translatable="yes">Add path to be included in database</property>
+                                <property name="tooltip-text" translatable="yes">Add path to be included in database
+                                </property>
                                 <property name="image">image1</property>
                                 <property name="always-show-image">True</property>
                               </object>
@@ -899,7 +865,7 @@
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkButton" id="include_remove_button">
+                              <object class="GtkButton" id="index_remove_button">
                                 <property name="visible">True</property>
                                 <property name="sensitive">False</property>
                                 <property name="can-focus">True</property>
@@ -1154,6 +1120,7 @@ If enabled, the system theme is asked to use a darker styling for the applicatio
 Note that not all system themes provide such a darker variant, therefore enabling this setting might not have an effect.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page0</property>
@@ -1172,6 +1139,7 @@ If disabled, the main menu is displayed as a menu bar with the search entry belo
 This resembles a more traditonal UI layout and takes a little bit more space.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page1</property>
@@ -1191,6 +1159,7 @@ This settings controls how file sizes are displayed.
 	• &lt;b&gt;Decimal  units:&lt;/b&gt; This refers to decimal SI prefixes &lt;i&gt;(e.g. 1 kB = 1000 bytes)&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page2</property>
@@ -1209,6 +1178,7 @@ If enabled, the window size from the previous session will be restored when you 
 Note that some window managers ignore this request and force the window to have a different size.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page3</property>
@@ -1233,6 +1203,7 @@ You can configure if those actions should be triggered when the file was opened 
 	• &lt;b&gt;mouse click&lt;/b&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page4</property>
@@ -1254,6 +1225,7 @@ If enabled, the search terms will be highlighted in the results view. For exampl
 This also works for regular expressions and wildcard expressions starting or ending with an asterisk. </property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page5</property>
@@ -1270,6 +1242,7 @@ This also works for regular expressions and wildcard expressions starting or end
 If enabled, the results view will show the full path of the focused file/folder in a small tooltip window.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page6</property>
@@ -1286,6 +1259,7 @@ If enabled, the results view will show the full path of the focused file/folder 
 If enabled, file/folder icons will be shown in the name column.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page7</property>
@@ -1302,6 +1276,7 @@ If enabled, file/folder icons will be shown in the name column.</property>
 If enabled, the column configuration of the results view from the previous session will be restored when you open an FSearch window. This includes the size and visibility of all columns.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page8</property>
@@ -1318,6 +1293,7 @@ If enabled, the column configuration of the results view from the previous sessi
 If enabled, the sort order of the results view from the previous session will be restored when you open an FSearch window.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page9</property>
@@ -1334,6 +1310,7 @@ If enabled, the sort order of the results view from the previous session will be
 If enabled, double clicking in the path column will open the selected path.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page10</property>
@@ -1350,6 +1327,7 @@ If enabled, double clicking in the path column will open the selected path.</pro
 If enabled, a single click will open the selected file/folder. If you only want to select a file/folder while this setting is active, you need to a hold &lt;i&gt;Ctrl&lt;/i&gt; at the same time while clicking the file/folder.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page11</property>
@@ -1366,6 +1344,7 @@ If enabled, a single click will open the selected file/folder. If you only want 
 If enabled, the path that is currently being indexed is displayed in the statusbar.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page12</property>
@@ -1385,6 +1364,7 @@ If enabled, a warning dialog is displayed when:
 </property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page13</property>
@@ -1401,6 +1381,7 @@ If enabled, a warning dialog is displayed when:
 If enabled, search terms containing path separators (i.e. "/") will be automatically matched against the full path of a file or folder.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page14</property>
@@ -1417,6 +1398,7 @@ If enabled, search terms containing path separators (i.e. "/") will be automatic
 If enabled, search terms containing at least one upper case character will trigger a case-sensitive search. This means a search term like &lt;i&gt;Foo&lt;/i&gt; will match &lt;i&gt;FooBar.txt&lt;/i&gt; but not &lt;i&gt;foobar.txt&lt;/i&gt;.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page15</property>
@@ -1435,6 +1417,7 @@ If enabled, no search results are displayed when the search entry is empty.
 If disabled, all files and folders will be displayed when the search entry is empty.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page16</property>
@@ -1453,29 +1436,12 @@ If enabled, the search is automatically updated with every keystroke.
 If disabled, the search is only updated when you hit &lt;i&gt;Enter&lt;/i&gt; or press the search button. </property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page17</property>
                     <property name="title">page17</property>
                     <property name="position">17</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkLabel" id="help_limit_num_results">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">&lt;b&gt;Limit number of results:&lt;/b&gt;
-
-If enabled, the number of search results will be limited to the specified number.
-
-Displaying lots of results has a significant performance impact, especially when the list isn't sorted by name. This will be improved in future versions.</property>
-                    <property name="use-markup">True</property>
-                    <property name="wrap">True</property>
-                  </object>
-                  <packing>
-                    <property name="name">page18</property>
-                    <property name="title">page18</property>
-                    <property name="position">18</property>
                   </packing>
                 </child>
                 <child>
@@ -1487,64 +1453,73 @@ Displaying lots of results has a significant performance impact, especially when
 If enabled, the database will be updated automatically in the background when you start FSearch.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page19</property>
                     <property name="title">page19</property>
-                    <property name="position">19</property>
+                    <property name="position">18</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel" id="help_include_list">
+                  <object class="GtkLabel" id="help_index_list">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="label" translatable="yes">&lt;b&gt;Included folders:&lt;/b&gt;
 
-This list contains all folders you want to include in the database.
+                      This list contains all folders you want to include in the database.
 
-	• &lt;b&gt;Active:&lt;/b&gt; If enabled, the path will included in the database to be searched in.
-	• &lt;b&gt;Path:&lt;/b&gt; The full path to be included.
-	• &lt;b&gt;Update:&lt;/b&gt; This setting is useful if you want to exclude certain paths from being
-			updated &lt;i&gt;(e.g. a path to a slow USB drive which doesn't change often)&lt;/i&gt;</property>
+                      • &lt;b&gt;Active:&lt;/b&gt; If enabled, the path will included in the database to be searched in.
+                      • &lt;b&gt;Path:&lt;/b&gt; The full path to be included.
+                      • &lt;b&gt;Update:&lt;/b&gt; This setting is useful if you want to exclude certain paths from
+                      being
+                      updated &lt;i&gt;(e.g. a path to a slow USB drive which doesn't change often)&lt;/i&gt;
+                    </property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page20</property>
                     <property name="title">page20</property>
-                    <property name="position">20</property>
+                    <property name="position">19</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel" id="help_include_add">
+                  <object class="GtkLabel" id="help_index_add">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="label" translatable="yes">&lt;b&gt;Add folder to database:&lt;/b&gt;
 
-This button opens a dialog where you can select a folder you want to include in the database for searching.</property>
+                      This button opens a dialog where you can select a folder you want to include in the database for
+                      searching.
+                    </property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page21</property>
                     <property name="title">page21</property>
-                    <property name="position">21</property>
+                    <property name="position">20</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel" id="help_include_remove">
+                  <object class="GtkLabel" id="help_index_remove">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="label" translatable="yes">&lt;b&gt;Remove selected row:&lt;/b&gt;
 
-This removes the selected folder from the list of included folders.</property>
+                      This removes the selected folder from the list of included folders.
+                    </property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page22</property>
                     <property name="title">page22</property>
-                    <property name="position">22</property>
+                    <property name="position">21</property>
                   </packing>
                 </child>
                 <child>
@@ -1560,11 +1535,12 @@ This list contains all folders you want to exclude from the database.
 	• &lt;b&gt;Path:&lt;/b&gt; The full path to be excluded.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page23</property>
                     <property name="title">page23</property>
-                    <property name="position">23</property>
+                    <property name="position">22</property>
                   </packing>
                 </child>
                 <child>
@@ -1576,11 +1552,12 @@ This list contains all folders you want to exclude from the database.
 This button opens a dialog where you can select a folder you want to exclude from the database.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page24</property>
                     <property name="title">page24</property>
-                    <property name="position">24</property>
+                    <property name="position">23</property>
                   </packing>
                 </child>
                 <child>
@@ -1592,11 +1569,12 @@ This button opens a dialog where you can select a folder you want to exclude fro
 This removes the selected folder from the list of excluded folders.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page25</property>
                     <property name="title">page25</property>
-                    <property name="position">25</property>
+                    <property name="position">24</property>
                   </packing>
                 </child>
                 <child>
@@ -1608,11 +1586,12 @@ This removes the selected folder from the list of excluded folders.</property>
 This is a semi-colon separated list of files (or folders) you want to exclude from the database. For example &lt;i&gt;.git;.cache;*.swp&lt;/i&gt; will exclude all files or folders which are called either &lt;i&gt;.git&lt;/i&gt; or &lt;i&gt;.cache&lt;/i&gt; or end with &lt;i&gt;.swp&lt;/i&gt;.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page26</property>
                     <property name="title">page26</property>
-                    <property name="position">26</property>
+                    <property name="position">25</property>
                   </packing>
                 </child>
                 <child>
@@ -1624,11 +1603,12 @@ This is a semi-colon separated list of files (or folders) you want to exclude fr
 If enabled, hidden files and folders will be excluded from the database &lt;i&gt;(i.e. all files or folders which start with a dot character)&lt;/i&gt;.</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page27</property>
                     <property name="title">page27</property>
-                    <property name="position">27</property>
+                    <property name="position">26</property>
                   </packing>
                 </child>
                 <child>
@@ -1636,11 +1616,12 @@ If enabled, hidden files and folders will be excluded from the database &lt;i&gt
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="label" translatable="yes">Focus a setting to get a detailed description of what it does.</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page28</property>
                     <property name="title">page28</property>
-                    <property name="position">28</property>
+                    <property name="position">27</property>
                   </packing>
                 </child>
                 <child>
@@ -1656,11 +1637,12 @@ If you want to update the database in the background, even when FSearch is not r
 &lt;i&gt;&lt;tt&gt;fsearch --update-database&lt;/tt&gt;&lt;/i&gt;</property>
                     <property name="use-markup">True</property>
                     <property name="wrap">True</property>
+                    <property name="selectable">True</property>
                   </object>
                   <packing>
                     <property name="name">page29</property>
                     <property name="title">page29</property>
-                    <property name="position">29</property>
+                    <property name="position">28</property>
                   </packing>
                 </child>
               </object>

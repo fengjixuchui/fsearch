@@ -18,8 +18,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include "database.h"
 #include "fsearch_config.h"
+#include "fsearch_database.h"
 #include "fsearch_thread_pool.h"
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -48,8 +48,8 @@ typedef enum {
 FsearchDatabaseState
 fsearch_application_get_db_state(FsearchApplication *fsearch);
 
-void
-fsearch_database_update(bool fullscan);
+uint32_t
+fsearch_application_get_num_db_entries(FsearchApplication *fsearch);
 
 FsearchDatabase *
 fsearch_application_get_db(FsearchApplication *fsearch);
@@ -66,8 +66,8 @@ fsearch_application_state_lock(FsearchApplication *fsearch);
 void
 fsearch_application_state_unlock(FsearchApplication *fsearch);
 
-void
-fsearch_application_update_listview_config(void);
+char *
+fsearch_application_get_database_file_path(void);
 
-FsearchThreadPool *
-fsearch_application_get_thread_pool(FsearchApplication *fsearch);
+char *
+fsearch_application_get_database_dir(void);

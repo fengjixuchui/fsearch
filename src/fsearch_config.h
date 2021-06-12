@@ -39,7 +39,6 @@ typedef struct {
 
 struct _FsearchConfig {
     // Search
-    bool limit_results;
     bool hide_results_on_empty_search;
     bool search_in_path;
     bool enable_regex;
@@ -48,8 +47,6 @@ struct _FsearchConfig {
     bool auto_match_case;
     bool search_as_you_type;
     bool show_base_2_units;
-
-    uint32_t num_results;
 
     // Applications
     char *folder_open_cmd;
@@ -85,6 +82,7 @@ struct _FsearchConfig {
     bool show_listview_icons;
     bool show_path_column;
     bool show_type_column;
+    bool show_extension_column;
     bool show_size_column;
     bool show_modified_column;
 
@@ -94,6 +92,7 @@ struct _FsearchConfig {
     uint32_t name_column_width;
     uint32_t path_column_width;
     uint32_t type_column_width;
+    uint32_t extension_column_width;
     uint32_t size_column_width;
     uint32_t modified_column_width;
 
@@ -112,7 +111,7 @@ struct _FsearchConfig {
     bool exclude_hidden_items;
     bool follow_symlinks;
 
-    GList *locations;
+    GList *indexes;
     GList *exclude_locations;
     char **exclude_files;
 };

@@ -20,67 +20,85 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <stdbool.h>
 
 #include "fsearch.h"
-#include "query.h"
+#include "fsearch_database.h"
+#include "fsearch_list_view.h"
+#include "fsearch_query.h"
+#include "fsearch_statusbar.h"
 
 G_BEGIN_DECLS
 
 #define FSEARCH_APPLICATION_WINDOW_TYPE (fsearch_application_window_get_type())
 
-G_DECLARE_FINAL_TYPE(FsearchApplicationWindow, fsearch_application_window, FSEARCH_WINDOW, WINDOW, GtkApplicationWindow)
+G_DECLARE_FINAL_TYPE(FsearchApplicationWindow,
+                     fsearch_application_window,
+                     FSEARCH,
+                     APPLICATION_WINDOW,
+                     GtkApplicationWindow)
 
 FsearchApplicationWindow *
 fsearch_application_window_new(FsearchApplication *app);
 
 void
-fsearch_application_window_prepare_close(FsearchApplicationWindow *self);
-
-void
 fsearch_application_window_prepare_shutdown(gpointer self);
 
-GtkTreeView *
+FsearchListView *
 fsearch_application_window_get_listview(FsearchApplicationWindow *self);
-
-GtkTreeSelection *
-fsearch_application_window_get_listview_selection(FsearchApplicationWindow *self);
 
 void
 fsearch_application_window_update_listview_config(FsearchApplicationWindow *self);
 
 void
-fsearch_window_apply_statusbar_revealer_config(FsearchApplicationWindow *win);
-
-GtkWidget *
-fsearch_application_window_get_search_mode_revealer(FsearchApplicationWindow *self);
-
-GtkWidget *
-fsearch_application_window_get_match_case_revealer(FsearchApplicationWindow *self);
-
-GtkWidget *
-fsearch_application_window_get_search_in_path_revealer(FsearchApplicationWindow *self);
+fsearch_application_window_apply_statusbar_revealer_config(FsearchApplicationWindow *win);
 
 GtkEntry *
 fsearch_application_window_get_search_entry(FsearchApplicationWindow *self);
 
-gboolean
-fsearch_application_window_update_search(FsearchApplicationWindow *self);
+FsearchStatusbar *
+fsearch_application_window_get_statusbar(FsearchApplicationWindow *self);
 
 void
-fsearch_application_window_apply_model(FsearchApplicationWindow *self);
+fsearch_application_window_update_query_flags(FsearchApplicationWindow *self);
 
 void
 fsearch_application_window_remove_model(FsearchApplicationWindow *self);
 
 void
-fsearch_application_window_update_database_label(FsearchApplicationWindow *self, const char *text);
+fsearch_application_window_set_database_index_text(FsearchApplicationWindow *self, const char *text);
 
-FsearchQueryHighlight *
-fsearch_application_window_get_query_highlight(FsearchApplicationWindow *self);
+uint32_t
+fsearch_application_window_get_num_results(FsearchApplicationWindow *self);
+
+gint
+fsearch_application_window_get_active_filter(FsearchApplicationWindow *self);
 
 void
-fsearch_application_window_update_results(void *data);
+fsearch_application_window_set_active_filter(FsearchApplicationWindow *self, guint active_filter);
 
 void
-fsearch_window_apply_search_revealer_config(FsearchApplicationWindow *win);
+fsearch_application_window_apply_search_revealer_config(FsearchApplicationWindow *win);
+
+void
+fsearch_application_window_added(FsearchApplicationWindow *win, FsearchApplication *app);
+
+void
+fsearch_application_window_removed(FsearchApplicationWindow *win, FsearchApplication *app);
+
+void
+fsearch_application_window_invert_selection(FsearchApplicationWindow *self);
+
+void
+fsearch_application_window_unselect_all(FsearchApplicationWindow *self);
+
+void
+fsearch_application_window_select_all(FsearchApplicationWindow *self);
+
+uint32_t
+fsearch_application_window_get_num_selected(FsearchApplicationWindow *self);
+
+void
+fsearch_application_window_selection_for_each(FsearchApplicationWindow *self, GHFunc func, gpointer user_data);
+
 G_END_DECLS
