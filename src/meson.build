@@ -1,4 +1,11 @@
-fsearch_sources = [
+resources = gnome.compile_resources('resources',
+    'gresource.xml',
+    source_dir: '.',
+    c_name: 'fsearch',
+)
+
+libfsearch_sources = [
+    resources,
     'fsearch.c',
     'fsearch_array.c',
     'fsearch_clipboard.c',
@@ -27,26 +34,42 @@ fsearch_sources = [
     'fsearch_thread_pool.c',
     'fsearch_token.c',
     'fsearch_ui_utils.c',
+    'fsearch_utf.c',
     'fsearch_window.c',
     'fsearch_window_actions.c',
-    'main.c',
 ]
 
 fsearch_deps = [
-  cc.find_library('m', required: true),
-  dependency('gio-2.0', version: '>= 2.50'),
-  dependency('gtk+-3.0', version: '>= 3.18'),
-  dependency('libpcre', version: '>= 8.31'),
+    cc.find_library('m', required: true),
+    dependency('gio-unix-2.0', version: '>= 2.50'),
+    dependency('gtk+-3.0', version: '>= 3.18'),
+    dependency('libpcre', version: '>= 8.31'),
+    dependency('icu-uc', version: '>= 3.8'),
 ]
 
-fsearch_sources += gnome.compile_resources('resources',
-  'gresource.xml',
-  source_dir: '.',
-  c_name: 'fsearch'
+libfsearch = static_library(
+    'fsearch',
+    libfsearch_sources,
+    dependencies: fsearch_deps,
+    include_directories: fsearch_include_dirs,
 )
 
-fsearch = executable('fsearch', fsearch_sources,
-         include_directories: [include_directories('..') ],
-         dependencies: fsearch_deps,
-              install: true,
+libfsearch_include_dirs = include_directories('.')
+
+libfsearch_dep = declare_dependency(
+    link_with: libfsearch,
+    include_directories: [
+        fsearch_include_dirs,
+        libfsearch_include_dirs
+    ],
+    dependencies: fsearch_deps,
+    sources: resources
 )
+
+fsearch = executable('fsearch', 'main.c',
+    include_directories: fsearch_include_dirs,
+    dependencies: libfsearch_dep,
+    install: true,
+)
+
+subdir('tests')

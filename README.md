@@ -1,9 +1,13 @@
-[![Build Status](https://travis-ci.org/cboxdoerfer/fsearch.svg?branch=master)](https://travis-ci.org/cboxdoerfer/fsearch)
+![Build Status](https://github.com/cboxdoerfer/fsearch/actions/workflows/build_test.yml/badge.svg)
 [![Translation status](https://hosted.weblate.org/widgets/fsearch/-/svg-badge.svg)](https://hosted.weblate.org/engage/fsearch/?utm_source=widget)
+
 
 FSearch is a fast file search utility, inspired by Everything Search Engine. It's written in C and based on GTK+3.
 
-**Note: The application is still in beta stage, but will see its first release as soon as localization support has been added**
+**Note: The application is still in beta stage**
+
+* For bug reports and feature requests please use the issue tracker: https://github.com/cboxdoerfer/fsearch/issues
+* For everything else related to FSearch you can talk to me on Matrix: https://matrix.to/#/#fsearch:matrix.org
 
 ![](https://user-images.githubusercontent.com/6108388/94472642-51f60a80-01cb-11eb-9b8c-e38fe2c02e43.png)
 ![](https://user-images.githubusercontent.com/6108388/94607184-dd3ed100-029b-11eb-86db-121e7984ca92.png)
@@ -24,10 +28,13 @@ FSearch is a fast file search utility, inspired by Everything Search Engine. It'
 - GLib 2.44
 - glibc 2.19 or musl 1.1.15 (other C standard libraries might work too, those are just the ones I verified)
 - PCRE (libpcre)
+- ICU 3.8
 
 ## Download
 #### Arch Linux (AUR)
 https://aur.archlinux.org/packages/fsearch-git/
+#### Fedora/RHEL/CentOS (unofficial)
+https://copr.fedorainfracloud.org/coprs/inori39/fsearch/
 #### openSUSE (unofficial)
 https://software.opensuse.org/download.html?project=home%3AAsterPhoenix13&package=fsearch
 #### Ubuntu

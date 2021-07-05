@@ -50,6 +50,9 @@ struct _FsearchApplication {
 
     bool new_window;
 
+    guint file_manager_watch_id;
+    bool has_file_manager_on_bus;
+
     FsearchDatabaseState db_state;
     guint db_timeout_id;
 
@@ -126,8 +129,7 @@ on_database_update_status(gpointer user_data) {
         }
     }
 
-    free(text);
-    text = NULL;
+    g_clear_pointer(&text, free);
 
     return G_SOURCE_REMOVE;
 }
@@ -150,7 +152,6 @@ prepare_windows_for_db_update(FsearchApplication *app) {
             fsearch_application_window_remove_model(window);
         }
     }
-    return;
 }
 
 static gboolean
@@ -160,13 +161,11 @@ on_database_update_finished(gpointer user_data) {
     FsearchDatabase *db = user_data;
     if (!g_cancellable_is_cancelled(self->db_thread_cancellable)) {
         prepare_windows_for_db_update(self);
-        if (self->db) {
-            db_unref(self->db);
-        }
-        self->db = db;
+        g_clear_pointer(&self->db, db_unref);
+        self->db = g_steal_pointer(&db);
     }
     else if (db) {
-        db_unref(db);
+        g_clear_pointer(&db, db_unref);
     }
     g_cancellable_reset(self->db_thread_cancellable);
     self->num_database_update_active--;
@@ -251,9 +250,11 @@ database_update_scan_and_save(FsearchApplication *app, FsearchDatabase *db) {
     if (!g_cancellable_is_cancelled(app->db_thread_cancellable)) {
         char *db_path = fsearch_application_get_database_dir();
         if (db_path) {
+            if (app->config->show_indexing_status) {
+                database_update_status_cb(_("Saving…"));
+            }
             db_save(db, db_path);
-            free(db_path);
-            db_path = NULL;
+            g_clear_pointer(&db_path, free);
         }
     }
 }
@@ -281,16 +282,15 @@ database_update(FsearchApplication *app, bool rescan) {
                 // load failed -> trigger rescan
                 g_idle_add(on_database_scan_add, NULL);
             }
-            free(db_file_path);
-            db_file_path = NULL;
+            g_clear_pointer(&db_file_path, free);
         }
     }
 
     g_timer_stop(timer);
     const double seconds = g_timer_elapsed(timer, NULL);
-    g_timer_destroy(timer);
+    g_clear_pointer(&timer, g_timer_destroy);
+
     g_debug("[app] database update finished in %.2f ms", seconds * 1000);
-    timer = NULL;
 
     return db;
 }
@@ -313,8 +313,7 @@ database_pool_func(gpointer data, gpointer user_data) {
         ctx->finished_cb(db);
     }
 
-    g_free(ctx);
-    ctx = NULL;
+    g_clear_pointer(&ctx, g_free);
 }
 
 static void
@@ -366,7 +365,7 @@ on_preferences_ui_finished(FsearchConfig *new_config) {
 
     if (app->config) {
         config_diff = config_cmp(app->config, new_config);
-        config_free(app->config);
+        g_clear_pointer(&app->config, config_free);
     }
     app->config = new_config;
     config_save(app->config);
@@ -395,7 +394,7 @@ action_preferences_activated(GSimpleAction *action, GVariant *parameter, gpointe
     g_assert(FSEARCH_IS_APPLICATION(gapp));
     FsearchApplication *app = FSEARCH_APPLICATION(gapp);
 
-    FsearchPreferencesPage page = g_variant_get_uint32(parameter);
+    const FsearchPreferencesPage page = g_variant_get_uint32(parameter);
 
     GtkWindow *win_active = gtk_application_get_active_window(GTK_APPLICATION(app));
     if (!win_active) {
@@ -447,36 +446,62 @@ fsearch_application_shutdown(GApplication *app) {
         }
     }
 
+    if (fsearch->file_manager_watch_id) {
+        g_bus_unwatch_name(fsearch->file_manager_watch_id);
+        fsearch->file_manager_watch_id = 0;
+    }
+
     if (fsearch->db_pool) {
         g_debug("[app] waiting for database thread to exit...");
         g_cancellable_cancel(fsearch->db_thread_cancellable);
-        g_thread_pool_free(fsearch->db_pool, FALSE, TRUE);
-        fsearch->db_pool = FALSE;
+        g_thread_pool_free(g_steal_pointer(&fsearch->db_pool), FALSE, TRUE);
         g_debug("[app] database thread finished.");
     }
-    if (fsearch->db) {
-        db_unref(fsearch->db);
-    }
 
-    if (fsearch->db_thread_cancellable) {
-        g_object_unref(fsearch->db_thread_cancellable);
-        fsearch->db_thread_cancellable = NULL;
-    }
+    g_clear_pointer(&fsearch->db, db_unref);
+    g_clear_object(&fsearch->db_thread_cancellable);
 
     if (fsearch->filters) {
-        g_list_free_full(fsearch->filters, (GDestroyNotify)fsearch_filter_unref);
-        fsearch->filters = NULL;
+        g_list_free_full(g_steal_pointer(&fsearch->filters), (GDestroyNotify)fsearch_filter_unref);
     }
 
     config_save(fsearch->config);
-    config_free(fsearch->config);
+    g_clear_pointer(&fsearch->config, config_free);
+
     g_mutex_clear(&fsearch->mutex);
+
     G_APPLICATION_CLASS(fsearch_application_parent_class)->shutdown(app);
 }
 
 static void
 fsearch_application_finalize(GObject *object) {
     G_OBJECT_CLASS(fsearch_application_parent_class)->finalize(object);
+}
+
+static void
+on_file_manager_name_appeared(GDBusConnection *connection,
+                              const gchar *name,
+                              const gchar *name_owner,
+                              gpointer user_data) {
+    FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
+    if (!app) {
+        return;
+    }
+    app->has_file_manager_on_bus = true;
+}
+
+static void
+on_file_manager_name_vanished(GDBusConnection *connection, const gchar *name, gpointer user_data) {
+    FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
+    if (!app) {
+        return;
+    }
+    app->has_file_manager_on_bus = false;
+}
+
+static void
+set_accel_for_action(GApplication *app, const char *action, const char *accel) {
+    gtk_application_set_accels_for_action(GTK_APPLICATION(app), action, (const gchar *const[]){accel, NULL});
 }
 
 static void
@@ -503,12 +528,20 @@ fsearch_application_startup(GApplication *app) {
     fsearch->db_state = FSEARCH_DATABASE_STATE_IDLE;
     fsearch->filters = fsearch_filter_get_default();
 
+    fsearch->file_manager_watch_id = g_bus_watch_name(G_BUS_TYPE_SESSION,
+                                                      "org.freedesktop.FileManager1",
+                                                      G_BUS_NAME_WATCHER_FLAGS_NONE,
+                                                      on_file_manager_name_appeared,
+                                                      on_file_manager_name_vanished,
+                                                      NULL,
+                                                      NULL);
+
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_resource(provider, "/io/github/cboxdoerfer/fsearch/ui/shared.css");
     gtk_style_context_add_provider_for_screen(gdk_screen_get_default(),
                                               GTK_STYLE_PROVIDER(provider),
                                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-    g_object_unref(provider);
+    g_clear_object(&provider);
 
     g_object_set(gtk_settings_get_default(),
                  "gtk-application-prefer-dark-theme",
@@ -519,43 +552,21 @@ fsearch_application_startup(GApplication *app) {
         GtkBuilder *menu_builder = gtk_builder_new_from_resource("/io/github/cboxdoerfer/fsearch/ui/menus.ui");
         GMenuModel *menu_model = G_MENU_MODEL(gtk_builder_get_object(menu_builder, "fsearch_main_menu"));
         gtk_application_set_menubar(GTK_APPLICATION(app), menu_model);
-        g_object_unref(menu_builder);
+        g_clear_object(&menu_builder);
     }
 
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "win.toggle_focus",
-                                          (const gchar *const[]){"Tab", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "win.focus_search",
-                                          (const gchar *const[]){"<control>f", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "app.new_window",
-                                          (const gchar *const[]){"<control>n", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "win.select_all",
-                                          (const gchar *const[]){"<control>a", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "win.hide_window",
-                                          (const gchar *const[]){"Escape", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "win.match_case",
-                                          (const gchar *const[]){"<control>i", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "win.search_mode",
-                                          (const gchar *const[]){"<control>r", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "win.search_in_path",
-                                          (const gchar *const[]){"<control>u", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "app.update_database",
-                                          (const gchar *const[]){"<control><shift>r", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "app.preferences(uint32 0)",
-                                          (const gchar *const[]){"<control>p", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-                                          "win.close_window",
-                                          (const gchar *const[]){"<control>w", NULL});
-    gtk_application_set_accels_for_action(GTK_APPLICATION(app), "app.quit", (const gchar *const[]){"<control>q", NULL});
+    set_accel_for_action(app, "win.toggle_focus", "Tab");
+    set_accel_for_action(app, "win.focus_search", "<control>f");
+    set_accel_for_action(app, "app.new_window", "<control>n");
+    set_accel_for_action(app, "win.select_all", "<control>a");
+    set_accel_for_action(app, "win.hide_window", "Escape");
+    set_accel_for_action(app, "win.match_case", "<control>i");
+    set_accel_for_action(app, "win.search_mode", "<control>r");
+    set_accel_for_action(app, "win.search_in_path", "<control>u");
+    set_accel_for_action(app, "app.update_database", "<control><shift>r");
+    set_accel_for_action(app, "app.preferences(uint32 0)", "<control>p");
+    set_accel_for_action(app, "win.close_window", "<control>w");
+    set_accel_for_action(app, "app.quit", "<control>q");
 
     fsearch->db_pool = g_thread_pool_new(database_pool_func, app, 1, TRUE, NULL);
 }
@@ -660,16 +671,16 @@ on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_d
 
     GDBusActionGroup *dbus_group = g_dbus_action_group_get(connection, fsearch_bus_name, fsearch_object_path);
 
-    guint signal_id = g_dbus_connection_signal_subscribe(connection,
-                                                         fsearch_bus_name,
-                                                         "org.gtk.Actions",
-                                                         "Changed",
-                                                         fsearch_object_path,
-                                                         NULL,
-                                                         G_DBUS_SIGNAL_FLAGS_NONE,
-                                                         on_action_group_changed,
-                                                         NULL,
-                                                         NULL);
+    const guint signal_id = g_dbus_connection_signal_subscribe(connection,
+                                                               fsearch_bus_name,
+                                                               "org.gtk.Actions",
+                                                               "Changed",
+                                                               fsearch_object_path,
+                                                               NULL,
+                                                               G_DBUS_SIGNAL_FLAGS_NONE,
+                                                               on_action_group_changed,
+                                                               NULL,
+                                                               NULL);
 
     GVariant *reply = g_dbus_connection_call_sync(connection,
                                                   fsearch_bus_name,
@@ -687,12 +698,12 @@ on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_d
     if (dbus_group && reply) {
         g_debug("[app] trigger database update in primary instance");
         g_action_group_activate_action(G_ACTION_GROUP(dbus_group), "update_database", NULL);
-        g_object_unref(dbus_group);
+        g_clear_object(&dbus_group);
 
         worker_ctx->update_called_on_primary = true;
     }
-    if (worker_ctx && worker_ctx->loop) {
-        g_main_loop_quit(worker_ctx->loop);
+    if (worker_ctx) {
+        g_clear_pointer(&worker_ctx->loop, g_main_loop_quit);
     }
 }
 
@@ -706,48 +717,46 @@ on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data)
 
 static int
 database_update_in_local_instance() {
-    GTimer *timer = g_timer_new();
-    g_timer_start(timer);
-
     FsearchConfig *config = calloc(1, sizeof(FsearchConfig));
     g_assert(config != NULL);
 
     if (!config_load(config)) {
         if (!config_load_default(config)) {
-            g_printerr("[database_update] failed to load config\n");
-            return 1;
+            g_printerr("[fsearch] failed to load config\n");
+            g_clear_pointer(&config, config_free);
+            return EXIT_FAILURE;
         }
     }
+
+    GTimer *timer = g_timer_new();
+    g_timer_start(timer);
+
     FsearchDatabase *db =
         db_new(config->indexes, config->exclude_locations, config->exclude_files, config->exclude_hidden_items);
 
-    int res = !db_scan(db, NULL, NULL);
+    int res = EXIT_FAILURE;
+    if (db_scan(db, NULL, NULL)) {
+        char *db_path = fsearch_application_get_database_dir();
+        if (db_path) {
+            res = db_save(db, db_path) ? EXIT_SUCCESS : EXIT_FAILURE;
 
-    char *db_path = fsearch_application_get_database_dir();
-    if (db_path) {
-        db_save(db, db_path);
-        free(db_path);
-        db_path = NULL;
+            g_clear_pointer(&db_path, free);
+        }
     }
 
-    db_unref(db);
-
-    config_free(config);
-    config = NULL;
+    g_clear_pointer(&db, db_unref);
+    g_clear_pointer(&config, config_free);
 
     g_timer_stop(timer);
     const double seconds = g_timer_elapsed(timer, NULL);
-    g_timer_destroy(timer);
-    timer = NULL;
+    g_clear_pointer(&timer, g_timer_destroy);
 
-    const char *debug_message = NULL;
-    if (res == 0) {
-        debug_message = "[app] database update finished in %.2f ms";
+    if (res == EXIT_SUCCESS) {
+        g_print("[fsearch] database update finished successfully in %.2f seconds\n", seconds);
     }
     else {
-        debug_message = "[app] database update failed after %.2f ms";
+        g_printerr("[fsearch] database update failed\n");
     }
-    g_debug(debug_message, seconds * 1000);
 
     return res;
 }
@@ -758,14 +767,14 @@ fsearch_application_local_database_update() {
     // If yes, trigger update there, so the UI is aware of the update and can display its progress
     FsearchApplicationDatabaseWorker worker_ctx = {};
     worker_ctx.loop = g_main_loop_new(NULL, FALSE);
-    guint owner_id = g_bus_own_name(G_BUS_TYPE_SESSION,
-                                    fsearch_db_worker_bus_name,
-                                    G_BUS_NAME_OWNER_FLAGS_NONE,
-                                    NULL,
-                                    on_name_acquired,
-                                    on_name_lost,
-                                    &worker_ctx,
-                                    NULL);
+    const guint owner_id = g_bus_own_name(G_BUS_TYPE_SESSION,
+                                          fsearch_db_worker_bus_name,
+                                          G_BUS_NAME_OWNER_FLAGS_NONE,
+                                          NULL,
+                                          on_name_acquired,
+                                          on_name_lost,
+                                          &worker_ctx,
+                                          NULL);
     g_main_loop_run(worker_ctx.loop);
     g_bus_unown_name(owner_id);
 
@@ -926,6 +935,12 @@ fsearch_application_get_database_dir() {
     g_string_append_c(db_dir, G_DIR_SEPARATOR);
     g_string_append(db_dir, "fsearch");
     return g_string_free(db_dir, FALSE);
+}
+
+gboolean
+fsearch_application_has_file_manager_on_bus(FsearchApplication *fsearch) {
+    g_assert(FSEARCH_IS_APPLICATION(fsearch));
+    return fsearch->has_file_manager_on_bus;
 }
 
 FsearchApplication *

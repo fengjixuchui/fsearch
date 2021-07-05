@@ -26,8 +26,7 @@
 
 FsearchQuery *
 fsearch_query_new(const char *text,
-                  DynamicArray *files,
-                  DynamicArray *folders,
+                  FsearchDatabase *db,
                   int32_t sort_order,
                   FsearchFilter *filter,
                   FsearchThreadPool *pool,
@@ -41,21 +40,20 @@ fsearch_query_new(const char *text,
     q->text = text ? strdup(text) : "";
     q->has_separator = strchr(text, G_DIR_SEPARATOR) ? 1 : 0;
 
-    q->files = files;
-    q->folders = folders;
+    q->db = db_ref(db);
 
     q->sort_order = sort_order;
 
     q->pool = pool;
 
-    q->token = fsearch_tokens_new(text, flags.match_case, flags.enable_regex, flags.auto_match_case);
+    q->token = fsearch_tokens_new(text, flags);
     q->num_token = 0;
     for (uint32_t i = 0; q->token[i] != NULL; i++) {
         q->num_token++;
     }
 
     if (filter && filter->query) {
-        q->filter_token = fsearch_tokens_new(filter->query, filter->match_case, filter->enable_regex, false);
+        q->filter_token = fsearch_tokens_new(filter->query, filter->flags);
         q->num_filter_token = 0;
         for (uint32_t i = 0; q->filter_token[i] != NULL; i++) {
             q->num_filter_token++;
@@ -75,31 +73,12 @@ fsearch_query_new(const char *text,
 
 static void
 fsearch_query_free(FsearchQuery *query) {
-    if (query->files) {
-        darray_unref(query->files);
-        query->files = NULL;
-    }
-    if (query->folders) {
-        darray_unref(query->folders);
-        query->folders = NULL;
-    }
-    if (query->filter) {
-        fsearch_filter_unref(query->filter);
-    }
-    if (query->highlight_tokens) {
-        fsearch_highlight_tokens_free(query->highlight_tokens);
-        query->highlight_tokens = NULL;
-    }
-    if (query->text) {
-        free(query->text);
-        query->text = NULL;
-    }
-    if (query->token) {
-        fsearch_tokens_free(query->token);
-        query->token = NULL;
-    }
-    free(query);
-    query = NULL;
+    g_clear_pointer(&query->db, db_unref);
+    g_clear_pointer(&query->filter, fsearch_filter_unref);
+    g_clear_pointer(&query->highlight_tokens, fsearch_highlight_tokens_free);
+    g_clear_pointer(&query->text, free);
+    g_clear_pointer(&query->token, fsearch_tokens_free);
+    g_clear_pointer(&query, free);
 }
 
 FsearchQuery *
@@ -117,8 +96,7 @@ fsearch_query_unref(FsearchQuery *query) {
         return;
     }
     if (g_atomic_int_dec_and_test(&query->ref_count)) {
-        fsearch_query_free(query);
-        query = NULL;
+        g_clear_pointer(&query, fsearch_query_free);
     }
 }
 

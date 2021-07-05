@@ -30,13 +30,18 @@
 #include "fsearch_limits.h"
 #include "fsearch_string_utils.h"
 #include "fsearch_task.h"
+#include "fsearch_task_ids.h"
 #include "fsearch_token.h"
+#include "fsearch_utf.h"
 
 #define THRESHOLD_FOR_PARALLEL_SEARCH 1000
 
 struct DatabaseSearchResult {
     DynamicArray *files;
     DynamicArray *folders;
+
+    FsearchDatabase *db;
+    FsearchDatabaseIndexType sort_type;
 
     volatile int ref_count;
 };
@@ -67,17 +72,10 @@ db_search_result_new(void) {
 
 static void
 db_search_result_free(DatabaseSearchResult *result) {
-    if (result->folders) {
-        darray_unref(result->folders);
-        result->folders = NULL;
-    }
-    if (result->files) {
-        darray_unref(result->files);
-        result->files = NULL;
-    }
-
-    free(result);
-    result = NULL;
+    g_clear_pointer(&result->folders, darray_unref);
+    g_clear_pointer(&result->files, darray_unref);
+    g_clear_pointer(&result->db, db_unref);
+    g_clear_pointer(&result, free);
 }
 
 DatabaseSearchResult *
@@ -95,9 +93,18 @@ db_search_result_unref(DatabaseSearchResult *result) {
         return;
     }
     if (g_atomic_int_dec_and_test(&result->ref_count)) {
-        db_search_result_free(result);
-        result = NULL;
+        g_clear_pointer(&result, db_search_result_free);
     }
+}
+
+FsearchDatabaseIndexType
+db_search_result_get_sort_type(DatabaseSearchResult *result) {
+    return result->sort_type;
+}
+
+FsearchDatabase *
+db_search_result_get_db(DatabaseSearchResult *result) {
+    return db_ref(result->db);
 }
 
 DynamicArray *
@@ -134,8 +141,7 @@ db_search_task(gpointer data, GCancellable *cancellable) {
         debug_message = "[query %d.%d] aborted after %.2f ms";
     }
     g_timer_stop(timer);
-    g_timer_destroy(timer);
-    timer = NULL;
+    g_clear_pointer(&timer, g_timer_destroy);
 
     g_debug(debug_message, query->window_id, query->id, seconds * 1000);
 
@@ -147,18 +153,10 @@ db_search_worker_context_free(DatabaseSearchWorkerContext *ctx) {
     if (!ctx) {
         return;
     }
-    if (ctx->results) {
-        g_free(ctx->results);
-        ctx->results = NULL;
-    }
 
-    if (ctx->entries) {
-        darray_unref(ctx->entries);
-        ctx->entries = NULL;
-    }
-
-    g_free(ctx);
-    ctx = NULL;
+    g_clear_pointer(&ctx->results, free);
+    g_clear_pointer(&ctx->entries, darray_unref);
+    g_clear_pointer(&ctx, free);
 }
 
 static DatabaseSearchWorkerContext *
@@ -184,7 +182,11 @@ db_search_worker_context_new(FsearchQuery *query,
 }
 
 static inline bool
-db_search_filter_entry(FsearchDatabaseEntry *entry, FsearchQuery *query, const char *haystack) {
+db_search_filter_entry(FsearchDatabaseEntry *entry,
+                       FsearchQuery *query,
+                       const char *haystack,
+                       FsearchUtfConversionBuffer *utf_buffer,
+                       bool *utf_search_ready) {
     if (!query->filter) {
         return true;
     }
@@ -208,7 +210,12 @@ db_search_filter_entry(FsearchDatabaseEntry *entry, FsearchQuery *query, const c
             }
             FsearchToken *t = query->filter_token[num_found++];
 
-            if (!t->search_func(haystack, t->text, t)) {
+            if (t->is_utf && *utf_search_ready == false) {
+                *utf_search_ready =
+                    fsearch_utf_normalize_and_fold_case(t->normalizer, t->case_map, utf_buffer, haystack);
+            }
+
+            if (!t->search_func(haystack, t->text, t, utf_buffer)) {
                 return false;
             }
         }
@@ -231,13 +238,19 @@ db_search_worker(void *data) {
     assert(ctx != NULL);
     assert(ctx->results != NULL);
 
+    FsearchUtfConversionBuffer utf_name_buffer = {};
+    fsearch_utf_conversion_buffer_init(&utf_name_buffer, 4 * PATH_MAX);
+
+    FsearchUtfConversionBuffer utf_path_buffer = {};
+    fsearch_utf_conversion_buffer_init(&utf_path_buffer, 4 * PATH_MAX);
+
     FsearchQuery *query = ctx->query;
     const uint32_t start = ctx->start_pos;
     const uint32_t end = ctx->end_pos;
     const uint32_t num_token = query->num_token;
     FsearchToken **token = query->token;
-    const uint32_t search_in_path = query->flags.search_in_path;
-    const uint32_t auto_search_in_path = query->flags.auto_search_in_path;
+    const uint32_t search_in_path = query->flags & QUERY_FLAG_SEARCH_IN_PATH;
+    const uint32_t auto_search_in_path = query->flags & QUERY_FLAG_AUTO_SEARCH_IN_PATH;
     FsearchDatabaseEntry **results = (FsearchDatabaseEntry **)ctx->results;
     DynamicArray *entries = ctx->entries;
 
@@ -249,24 +262,32 @@ db_search_worker(void *data) {
 
     uint32_t num_results = 0;
 
-    bool path_set = false;
-
     GString *path_string = g_string_sized_new(PATH_MAX);
     for (uint32_t i = start; i <= end; i++) {
         if (G_UNLIKELY(g_cancellable_is_cancelled(ctx->cancellable))) {
-            return;
+            break;
         }
         FsearchDatabaseEntry *entry = darray_get_item(entries, i);
         const char *haystack_name = db_entry_get_name(entry);
         if (G_UNLIKELY(!haystack_name)) {
             continue;
         }
-        if (search_in_path || query->filter->search_in_path) {
+
+        bool utf_name_ready = false;
+        bool utf_path_ready = false;
+
+        bool path_set = false;
+        if (search_in_path || query->filter->flags & QUERY_FLAG_SEARCH_IN_PATH) {
             db_search_build_path(entry, path_string, haystack_name);
             path_set = true;
         }
 
-        if (!db_search_filter_entry(entry, query, query->filter->search_in_path ? path_string->str : haystack_name)) {
+        if (!db_search_filter_entry(
+                entry,
+                query,
+                query->filter->flags & QUERY_FLAG_SEARCH_IN_PATH ? path_string->str : haystack_name,
+                query->filter->flags & QUERY_FLAG_SEARCH_IN_PATH ? &utf_path_buffer : &utf_name_buffer,
+                query->filter->flags & QUERY_FLAG_SEARCH_IN_PATH ? &utf_path_ready : &utf_name_ready)) {
             continue;
         }
 
@@ -279,23 +300,37 @@ db_search_worker(void *data) {
             }
             FsearchToken *t = token[num_found++];
             const char *haystack = NULL;
+            FsearchUtfConversionBuffer *utf_buffer = NULL;
+            bool *utf_buffer_ready = NULL;
+
             if (search_in_path || (auto_search_in_path && t->has_separator)) {
                 if (!path_set) {
                     db_search_build_path(entry, path_string, haystack_name);
                     path_set = true;
                 }
                 haystack = path_string->str;
+                utf_buffer = &utf_path_buffer;
+                utf_buffer_ready = &utf_path_ready;
             }
             else {
                 haystack = haystack_name;
+                utf_buffer = &utf_name_buffer;
+                utf_buffer_ready = &utf_name_ready;
             }
-            if (!t->search_func(haystack, t->text, t)) {
+            if (t->is_utf && *utf_buffer_ready == false) {
+                *utf_buffer_ready =
+                    fsearch_utf_normalize_and_fold_case(t->normalizer, t->case_map, utf_buffer, haystack);
+            }
+
+            if (!t->search_func(haystack, t->text, t, utf_buffer)) {
                 break;
             }
         }
     }
-    g_string_free(path_string, TRUE);
-    path_string = NULL;
+
+    fsearch_utf_conversion_buffer_clear(&utf_path_buffer);
+    fsearch_utf_conversion_buffer_clear(&utf_name_buffer);
+    g_string_free(g_steal_pointer(&path_string), TRUE);
 
     ctx->num_results = num_results;
 }
@@ -346,8 +381,7 @@ db_search_entries(FsearchQuery *q,
     }
     if (g_cancellable_is_cancelled(cancellable)) {
         for (uint32_t i = 0; i < num_threads; i++) {
-            DatabaseSearchWorkerContext *ctx = thread_data[i];
-            db_search_worker_context_free(ctx);
+            g_clear_pointer(&thread_data[i], db_search_worker_context_free);
         }
         return NULL;
     }
@@ -368,8 +402,7 @@ db_search_entries(FsearchQuery *q,
 
         darray_add_items(results, (void **)ctx->results, ctx->num_results);
 
-        db_search_worker_context_free(ctx);
-        ctx = NULL;
+        g_clear_pointer(&ctx, db_search_worker_context_free);
     }
 
     return results;
@@ -378,50 +411,61 @@ db_search_entries(FsearchQuery *q,
 static DatabaseSearchResult *
 db_search_empty(FsearchQuery *q) {
     DatabaseSearchResult *result = db_search_result_new();
-    result->folders = darray_ref(q->folders);
-    result->files = darray_ref(q->files);
+    DynamicArray *files = NULL;
+    DynamicArray *folders = NULL;
+
+    FsearchDatabaseIndexType sort_type;
+
+    db_lock(q->db);
+    db_get_entries_sorted(q->db, q->sort_order, &sort_type, &folders, &files);
+    result->folders = folders;
+    result->files = files;
+    result->db = db_ref(q->db);
+    result->sort_type = sort_type;
+    db_unlock(q->db);
     return result;
 }
 
 static DatabaseSearchResult *
 db_search(FsearchQuery *q, GCancellable *cancellable) {
-    const uint32_t num_folder_entries = q->folders ? darray_get_num_items(q->folders) : 0;
-    const uint32_t num_file_entries = q->files ? darray_get_num_items(q->files) : 0;
-    if (num_folder_entries == 0 && num_file_entries == 0) {
-        return db_search_result_new();
-    }
+    DynamicArray *files_in = NULL;
+    DynamicArray *folders_in = NULL;
 
-    DynamicArray *files = NULL;
-    DynamicArray *folders = NULL;
+    FsearchDatabaseIndexType sort_type;
 
-    folders = db_search_entries(q, cancellable, q->folders, db_search_worker);
+    db_lock(q->db);
+    db_get_entries_sorted(q->db, q->sort_order, &sort_type, &folders_in, &files_in);
+
+    DynamicArray *files_res = NULL;
+    DynamicArray *folders_res = NULL;
+
+    const uint32_t num_folders = folders_in ? darray_get_num_items(folders_in) : 0;
+    folders_res = num_folders > 0 ? db_search_entries(q, cancellable, folders_in, db_search_worker) : NULL;
+    g_clear_pointer(&folders_in, darray_unref);
     if (g_cancellable_is_cancelled(cancellable)) {
         goto search_was_cancelled;
     }
-    files = db_search_entries(q, cancellable, q->files, db_search_worker);
+    const uint32_t num_files = files_in ? darray_get_num_items(files_in) : 0;
+    files_res = num_files > 0 ? db_search_entries(q, cancellable, files_in, db_search_worker) : NULL;
+    g_clear_pointer(&files_in, darray_unref);
     if (g_cancellable_is_cancelled(cancellable)) {
         goto search_was_cancelled;
     }
 
     DatabaseSearchResult *result = db_search_result_new();
-    if (files) {
-        result->files = files;
-    }
-    if (folders) {
-        result->folders = folders;
-    }
+    result->files = files_res;
+    result->folders = folders_res;
+    result->db = db_ref(q->db);
+    result->sort_type = sort_type;
 
+    db_unlock(q->db);
     return result;
 
 search_was_cancelled:
-    if (folders) {
-        darray_unref(folders);
-        folders = NULL;
-    }
-    if (files) {
-        darray_unref(files);
-        files = NULL;
-    }
+    g_clear_pointer(&folders_res, darray_unref);
+    g_clear_pointer(&files_res, darray_unref);
+
+    db_unlock(q->db);
     return NULL;
 }
 
@@ -430,5 +474,11 @@ db_search_queue(FsearchTaskQueue *queue,
                 FsearchQuery *query,
                 FsearchTaskFinishedFunc finished_func,
                 FsearchTaskCancelledFunc cancelled_func) {
-    fsearch_task_queue(queue, 0, db_search_task, finished_func, cancelled_func, FSEARCH_TASK_CLEAR_SAME_ID, query);
+    fsearch_task_queue(queue,
+                       FSEARCH_TASK_ID_SEARCH,
+                       db_search_task,
+                       finished_func,
+                       cancelled_func,
+                       FSEARCH_TASK_CLEAR_SAME_ID,
+                       query);
 }

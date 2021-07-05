@@ -20,8 +20,7 @@
 
 #include "fsearch_array.h"
 #include "fsearch_database_index.h"
-#include "fsearch_filter.h"
-#include "fsearch_query.h"
+#include "fsearch_thread_pool.h"
 
 #include <gio/gio.h>
 #include <glib.h>
@@ -92,6 +91,13 @@ db_get_thread_pool(FsearchDatabase *db);
 
 bool
 db_has_entries_sorted_by_type(FsearchDatabase *db, FsearchDatabaseIndexType sort_type);
+
+bool
+db_get_entries_sorted(FsearchDatabase *db,
+                      FsearchDatabaseIndexType requested_sort_type,
+                      FsearchDatabaseIndexType *returned_sort_type,
+                      DynamicArray **folders,
+                      DynamicArray **files);
 
 DynamicArray *
 db_get_folders_sorted_copy(FsearchDatabase *db, FsearchDatabaseIndexType sort_type);

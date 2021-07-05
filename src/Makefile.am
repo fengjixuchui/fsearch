@@ -7,9 +7,9 @@ EXTRA_DIST = fsearch.glade \
 	     menus.ui
 
 if DEBUG
-AM_CFLAGS = $(FSEARCH_CFLAGS) $(GTK_CFLAGS) $(GLIB_CFLAGS) $(GIO_CFLAGS) $(PCRE_CFLAGS) -lm -Wall -std=c11 -D_FILE_OFFSET_BITS=64 -g -Ofast -DDEBUG=1
+AM_CFLAGS = $(FSEARCH_CFLAGS) $(GTK_CFLAGS) $(GLIB_CFLAGS) $(GIO_CFLAGS) $(PCRE_CFLAGS) $(ICU_CFLAGS) -lm -Wall -std=c11 -D_FILE_OFFSET_BITS=64 -g -Ofast -DDEBUG=1
 else
-AM_CFLAGS = $(FSEARCH_CFLAGS) $(GTK_CFLAGS) $(GLIB_CFLAGS) $(GIO_CFLAGS) $(PCRE_CFLAGS) -lm -Wall -std=c11 -D_FILE_OFFSET_BITS=64 -Ofast
+AM_CFLAGS = $(FSEARCH_CFLAGS) $(GTK_CFLAGS) $(GLIB_CFLAGS) $(GIO_CFLAGS) $(PCRE_CFLAGS) $(ICU_CFLAGS) -lm -Wall -std=c11 -D_FILE_OFFSET_BITS=64 -Ofast
 endif
 
 bin_PROGRAMS = fsearch
@@ -35,14 +35,17 @@ fsearch_NOINST_H_FILES = fsearch.h \
 			 fsearch_preferences_ui.h \
 			 fsearch_preferences_widgets.h \
 			 fsearch_query.h \
+			 fsearch_query_flags.h \
              fsearch_result_view.h \
 			 fsearch_selection.h \
 			 fsearch_statusbar.h \
 			 fsearch_string_utils.h \
 			 fsearch_task.h \
+			 fsearch_task_ids.h \
 			 fsearch_thread_pool.h \
 			 fsearch_token.h \
 			 fsearch_ui_utils.h \
+			 fsearch_utf.h \
 			 fsearch_window.h \
 			 fsearch_window_actions.h \
 			 utf8.h
@@ -76,6 +79,7 @@ fsearch_SOURCES = main.c \
 		  fsearch_thread_pool.c \
 		  fsearch_token.c \
 		  fsearch_ui_utils.c \
+		  fsearch_utf.c \
 		  fsearch_window.c \
 		  fsearch_window_actions.c \
 		  resources.c \
@@ -95,5 +99,5 @@ resources.h:
 resources.c: gresource.xml $(resource_files) resources.h
 	$(AM_V_GEN) $(GLIB_COMPILE_RESOURCES) --target=$@ --sourcedir=$(srcdir) --generate-source $(srcdir)/gresource.xml
 
-fsearch_LDADD = $(FSEARCH_LIBS) $(GTK_LIBS) $(GLIB_LIBS) $(GIO_LIBS) $(PCRE_LIBS) -lm
+fsearch_LDADD = $(FSEARCH_LIBS) $(GTK_LIBS) $(GLIB_LIBS) $(GIO_LIBS) $(PCRE_LIBS) $(ICU_LIBS) -lm
 

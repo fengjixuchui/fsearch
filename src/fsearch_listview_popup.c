@@ -22,8 +22,23 @@
 
 #include <glib/gi18n.h>
 
+#include "fsearch.h"
 #include "fsearch_database_search.h"
 #include "fsearch_listview_popup.h"
+
+static void
+add_file_properties_entry(GtkBuilder *builder) {
+    FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
+    if (app && fsearch_application_has_file_manager_on_bus(app)) {
+        GMenu *menu_properties_section =
+            G_MENU(gtk_builder_get_object(builder, "fsearch_listview_menu_file_properties_section"));
+        if (menu_properties_section) {
+            GMenuItem *properties_item = g_menu_item_new(_("Properties…"), "win.file_properties");
+            g_menu_append_item(menu_properties_section, properties_item);
+            g_clear_object(&properties_item);
+        }
+    }
+}
 
 static void
 fill_open_with_menu(GtkBuilder *builder, const char *name, FsearchDatabaseEntryType type) {
@@ -56,23 +71,19 @@ fill_open_with_menu(GtkBuilder *builder, const char *name, FsearchDatabaseEntryT
         GMenuItem *menu_item = g_menu_item_new(display_name, detailed_action);
         g_menu_item_set_icon(menu_item, g_app_info_get_icon(app_info));
         g_menu_append_item(menu_mime, menu_item);
-        g_object_unref(menu_item);
+        g_clear_object(&menu_item);
     }
 
     char detailed_action[1024] = "";
     snprintf(detailed_action, sizeof(detailed_action), "win.open_with_other('%s')", content_type);
     GMenuItem *open_with_item = g_menu_item_new(_("Other Application…"), detailed_action);
     g_menu_append_item(menu_mime, open_with_item);
-    g_object_unref(open_with_item);
+    g_clear_object(&open_with_item);
 
 clean_up:
-    if (content_type) {
-        g_free(content_type);
-        content_type = NULL;
-    }
+    g_clear_pointer(&content_type, g_free);
     if (app_list) {
-        g_list_free_full(app_list, g_object_unref);
-        app_list = NULL;
+        g_list_free_full(g_steal_pointer(&app_list), g_object_unref);
     }
 }
 
@@ -81,10 +92,11 @@ listview_popup_menu(GtkWidget *widget, const char *name, FsearchDatabaseEntryTyp
     GtkBuilder *builder = gtk_builder_new_from_resource("/io/github/cboxdoerfer/fsearch/ui/menus.ui");
 
     fill_open_with_menu(builder, name, type);
+    add_file_properties_entry(builder);
 
     GMenu *menu_root = G_MENU(gtk_builder_get_object(builder, "fsearch_listview_popup_menu"));
     GtkWidget *menu_widget = gtk_menu_new_from_model(G_MENU_MODEL(menu_root));
-    g_object_unref(builder);
+    g_clear_object(&builder);
 
     gtk_menu_attach_to_widget(GTK_MENU(menu_widget), GTK_WIDGET(widget), NULL);
 #if !GTK_CHECK_VERSION(3, 22, 0)
@@ -94,4 +106,3 @@ listview_popup_menu(GtkWidget *widget, const char *name, FsearchDatabaseEntryTyp
 #endif
     return TRUE;
 }
-

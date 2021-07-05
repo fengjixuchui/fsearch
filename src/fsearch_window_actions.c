@@ -27,7 +27,6 @@
 #include "fsearch_config.h"
 #include "fsearch_database_entry.h"
 #include "fsearch_file_utils.h"
-#include "fsearch_limits.h"
 #include "fsearch_list_view.h"
 #include "fsearch_statusbar.h"
 #include "fsearch_ui_utils.h"
@@ -91,7 +90,25 @@ confirm_file_open_action(GtkWidget *parent, int num_files) {
 }
 
 static void
-prepend_path(gpointer key, gpointer value, gpointer user_data) {
+prepend_path_uri_to_array(gpointer key, gpointer value, gpointer user_data) {
+    if (!value) {
+        return;
+    }
+
+    GPtrArray **file_array = (GPtrArray **)user_data;
+    FsearchDatabaseEntry *entry = value;
+    GString *path_full = db_entry_get_path_full(entry);
+    if (!path_full) {
+        return;
+    }
+    char *file_uri = g_filename_to_uri(g_string_free(g_steal_pointer(&path_full), FALSE), NULL, NULL);
+    if (file_uri) {
+        g_ptr_array_add(*file_array, file_uri);
+    }
+}
+
+static void
+prepend_path_to_list(gpointer key, gpointer value, gpointer user_data) {
     if (!value) {
         return;
     }
@@ -102,9 +119,7 @@ prepend_path(gpointer key, gpointer value, gpointer user_data) {
     if (!path_full) {
         return;
     }
-    *file_list = g_list_prepend(*file_list, path_full->str);
-    g_string_free(path_full, FALSE);
-    path_full = NULL;
+    *file_list = g_list_prepend(*file_list, g_string_free(g_steal_pointer(&path_full), FALSE));
 }
 
 static bool
@@ -125,16 +140,18 @@ fsearch_delete_selection(GSimpleAction *action, GVariant *variant, bool delete, 
 
     const guint num_selected_rows = fsearch_application_window_get_num_selected(self);
     GList *file_list = NULL;
-    fsearch_application_window_selection_for_each(self, prepend_path, &file_list);
+    fsearch_application_window_selection_for_each(self, prepend_path_to_list, &file_list);
 
     if (delete || num_selected_rows > 20) {
-        char error_msg[PATH_MAX] = "";
-        snprintf(error_msg, sizeof(error_msg), _("Do you really want to remove %d file(s)?"), num_selected_rows);
+        GString *warning_message = g_string_new(NULL);
+        g_string_printf(warning_message, _("Do you really want to remove %d file(s)?"), num_selected_rows);
         gint response = ui_utils_run_gtk_dialog(GTK_WIDGET(self),
                                                 GTK_MESSAGE_WARNING,
                                                 GTK_BUTTONS_OK_CANCEL,
                                                 delete ? _("Deleting files…") : _("Moving files to trash…"),
-                                                error_msg);
+                                                warning_message->str);
+        g_string_free(g_steal_pointer(&warning_message), TRUE);
+
         if (response != GTK_RESPONSE_OK) {
             goto save_fail;
         }
@@ -156,8 +173,66 @@ fsearch_delete_selection(GSimpleAction *action, GVariant *variant, bool delete, 
 
 save_fail:
     if (file_list) {
-        g_list_free_full(file_list, (GDestroyNotify)g_free);
-        file_list = NULL;
+        g_list_free_full(g_steal_pointer(&file_list), (GDestroyNotify)g_free);
+    }
+}
+
+static void
+fsearch_window_action_file_properties(GSimpleAction *action, GVariant *variant, gpointer user_data) {
+    FsearchApplicationWindow *self = user_data;
+
+    const guint num_selected_rows = fsearch_application_window_get_num_selected(self);
+    GPtrArray *file_array = g_ptr_array_sized_new(num_selected_rows);
+    fsearch_application_window_selection_for_each(self, prepend_path_uri_to_array, &file_array);
+
+    if (num_selected_rows > 20) {
+        GString *warning_message = g_string_new(NULL);
+        g_string_printf(warning_message, _("Do you really want to open %d file property windows?"), num_selected_rows);
+        gint response = ui_utils_run_gtk_dialog(GTK_WIDGET(self),
+                                                GTK_MESSAGE_WARNING,
+                                                GTK_BUTTONS_OK_CANCEL,
+                                                _("Opening file properties…"),
+                                                warning_message->str);
+        g_string_free(g_steal_pointer(&warning_message), TRUE);
+
+        if (response != GTK_RESPONSE_OK) {
+            goto save_fail;
+        }
+    }
+
+    // ensure we have a NULL terminated array
+    g_ptr_array_add(file_array, NULL);
+
+    char **file_uris = (char **)g_ptr_array_free(g_steal_pointer(&file_array), FALSE);
+    if (file_uris) {
+        GDBusConnection *connection = g_application_get_dbus_connection(G_APPLICATION(FSEARCH_APPLICATION_DEFAULT));
+        if (connection) {
+            GError *error = NULL;
+            g_dbus_connection_call_sync(connection,
+                                        "org.freedesktop.FileManager1",
+                                        "/org/freedesktop/FileManager1",
+                                        "org.freedesktop.FileManager1",
+                                        "ShowItemProperties",
+                                        g_variant_new("(^ass)", file_uris, ""),
+                                        NULL,
+                                        G_DBUS_CALL_FLAGS_NONE,
+                                        -1,
+                                        NULL,
+                                        &error);
+            if (error) {
+                g_debug("[file_properties] %s", error->message);
+                g_clear_pointer(&error, g_error_free);
+            }
+        }
+        g_clear_pointer(&file_uris, g_strfreev);
+    }
+
+    return;
+
+save_fail:
+    if (file_array) {
+        g_ptr_array_set_free_func(file_array, (GDestroyNotify)g_free);
+        g_ptr_array_free(g_steal_pointer(&file_array), TRUE);
     }
 }
 
@@ -199,7 +274,7 @@ static void
 fsearch_window_action_cut_or_copy(GSimpleAction *action, GVariant *variant, bool copy, gpointer user_data) {
     FsearchApplicationWindow *self = user_data;
     GList *file_list = NULL;
-    fsearch_application_window_selection_for_each(self, prepend_path, &file_list);
+    fsearch_application_window_selection_for_each(self, prepend_path_to_list, &file_list);
     file_list = g_list_reverse(file_list);
     clipboard_copy_file_list(file_list, copy);
 }
@@ -218,7 +293,7 @@ static void
 fsearch_window_action_copy_filepath(GSimpleAction *action, GVariant *variant, gpointer user_data) {
     FsearchApplicationWindow *self = user_data;
     GList *file_list = NULL;
-    fsearch_application_window_selection_for_each(self, prepend_path, &file_list);
+    fsearch_application_window_selection_for_each(self, prepend_path_to_list, &file_list);
     file_list = g_list_reverse(file_list);
     clipboard_copy_filepath_list(file_list);
 }
@@ -235,8 +310,7 @@ open_cb(gpointer key, gpointer value, gpointer data) {
         bool *open_failed = data;
         *open_failed = true;
     }
-    g_string_free(path_full, TRUE);
-    path_full = NULL;
+    g_string_free(g_steal_pointer(&path_full), TRUE);
 }
 
 static void
@@ -252,8 +326,7 @@ open_with_cb(gpointer key, gpointer value, gpointer data) {
     }
     GList **list = data;
     *list = g_list_append(*list, g_file_new_for_path(path_full->str));
-    g_string_free(path_full, TRUE);
-    path_full = NULL;
+    g_string_free(g_steal_pointer(&path_full), TRUE);
 }
 
 void
@@ -292,12 +365,10 @@ launch_selection_for_app_info(FsearchApplicationWindow *win, GAppInfo *app_info)
     fsearch_application_window_selection_for_each(win, open_with_cb, &file_list);
     g_app_info_launch(app_info, file_list, G_APP_LAUNCH_CONTEXT(launch_context), NULL);
 
-    g_object_unref(launch_context);
-    launch_context = NULL;
+    g_clear_object(&launch_context);
 
     if (file_list) {
-        g_list_free_full(file_list, g_object_unref);
-        file_list = NULL;
+        g_list_free_full(g_steal_pointer(&file_list), g_object_unref);
     }
 }
 
@@ -315,8 +386,7 @@ fsearch_window_action_open_with(GSimpleAction *action, GVariant *variant, gpoint
     }
     launch_selection_for_app_info(self, G_APP_INFO(app_info));
 
-    g_object_unref(app_info);
-    app_info = NULL;
+    g_clear_object(&app_info);
 }
 
 static void
@@ -383,10 +453,8 @@ open_folder_cb(gpointer key, gpointer value, gpointer data) {
         bool *open_failed = data;
         *open_failed = true;
     }
-    g_string_free(path, TRUE);
-    path = NULL;
-    g_string_free(path_full, TRUE);
-    path_full = NULL;
+    g_string_free(g_steal_pointer(&path), TRUE);
+    g_string_free(g_steal_pointer(&path_full), TRUE);
 }
 
 static void
@@ -408,7 +476,7 @@ on_fsearch_window_action_open_with_response(GtkDialog *dialog, gint response_id,
 
     launch_selection_for_app_info(self, app_info);
 
-    g_object_unref(app_info);
+    g_clear_object(&app_info);
 }
 
 static void
@@ -616,7 +684,7 @@ action_toggle_state_cb(GSimpleAction *saction, GVariant *parameter, gpointer use
 
     GVariant *state = g_action_get_state(action);
     g_action_change_state(action, g_variant_new_boolean(!g_variant_get_boolean(state)));
-    g_variant_unref(state);
+    g_clear_pointer(&state, g_variant_unref);
 }
 
 static GActionEntry FsearchWindowActions[] = {
@@ -628,6 +696,7 @@ static GActionEntry FsearchWindowActions[] = {
     {"copy_clipboard", fsearch_window_action_copy},
     {"copy_filepath_clipboard", fsearch_window_action_copy_filepath},
     {"cut_clipboard", fsearch_window_action_cut},
+    {"file_properties", fsearch_window_action_file_properties},
     {"move_to_trash", fsearch_window_action_move_to_trash},
     {"delete_selection", fsearch_window_action_delete},
     {"select_all", fsearch_window_action_select_all},
@@ -668,6 +737,8 @@ fsearch_window_actions_update(FsearchApplicationWindow *self) {
         num_rows_selected = fsearch_application_window_get_num_selected(self);
     }
 
+    const bool has_file_manager_on_bus = fsearch_application_has_file_manager_on_bus(FSEARCH_APPLICATION_DEFAULT);
+
     action_set_enabled(group, "close_window", TRUE);
     action_set_enabled(group, "select_all", num_rows >= 1 ? TRUE : FALSE);
     action_set_enabled(group, "deselect_all", num_rows_selected);
@@ -676,6 +747,7 @@ fsearch_window_actions_update(FsearchApplicationWindow *self) {
     action_set_enabled(group, "copy_filepath_clipboard", num_rows_selected);
     action_set_enabled(group, "cut_clipboard", num_rows_selected);
     action_set_enabled(group, "delete_selection", FALSE);
+    action_set_enabled(group, "file_properties", has_file_manager_on_bus && num_rows_selected >= 1 ? TRUE : FALSE);
     action_set_enabled(group, "move_to_trash", num_rows_selected);
     action_set_enabled(group, "open", num_rows_selected);
     action_set_enabled(group, "open_with", num_rows_selected >= 1 ? TRUE : FALSE);

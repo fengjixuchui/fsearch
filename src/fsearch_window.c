@@ -109,11 +109,22 @@ static FsearchQueryFlags
 get_query_flags() {
     FsearchApplication *app = FSEARCH_APPLICATION_DEFAULT;
     FsearchConfig *config = fsearch_application_get_config(app);
-    FsearchQueryFlags flags = {.enable_regex = config->enable_regex,
-                               .match_case = config->match_case,
-                               .auto_match_case = config->auto_match_case,
-                               .search_in_path = config->search_in_path,
-                               .auto_search_in_path = config->auto_search_in_path};
+    FsearchQueryFlags flags = 0;
+    if (config->match_case) {
+        flags |= QUERY_FLAG_MATCH_CASE;
+    }
+    if (config->auto_match_case) {
+        flags |= QUERY_FLAG_AUTO_MATCH_CASE;
+    }
+    if (config->enable_regex) {
+        flags |= QUERY_FLAG_REGEX;
+    }
+    if (config->search_in_path) {
+        flags |= QUERY_FLAG_SEARCH_IN_PATH;
+    }
+    if (config->auto_search_in_path) {
+        flags |= QUERY_FLAG_AUTO_SEARCH_IN_PATH;
+    }
     return flags;
 }
 
@@ -272,10 +283,8 @@ fsearch_application_window_finalize(GObject *object) {
     FsearchApplicationWindow *self = (FsearchApplicationWindow *)object;
     g_assert(FSEARCH_IS_APPLICATION_WINDOW(self));
 
-    if (self->result_view) {
-        fsearch_result_view_free(self->result_view);
-        self->result_view = NULL;
-    }
+    g_clear_pointer(&self->result_view, fsearch_result_view_free);
+
     G_OBJECT_CLASS(fsearch_application_window_parent_class)->finalize(object);
 }
 
@@ -341,14 +350,6 @@ fsearch_window_db_view_sort_finished_cb(gpointer data) {
     return G_SOURCE_REMOVE;
 }
 
-static void
-fsearch_window_db_view_sort_finished(FsearchDatabaseView *view, gpointer user_data) {
-    if (!user_data) {
-        return;
-    }
-    g_idle_add(fsearch_window_db_view_sort_finished_cb, user_data);
-}
-
 static gboolean
 on_sort_overlay_show(gpointer data) {
     const guint win_id = GPOINTER_TO_UINT(data);
@@ -366,18 +367,11 @@ fsearch_window_db_view_sort_started_cb(gpointer data) {
     FsearchApplicationWindow *win = get_window_for_id(win_id);
 
     if (win) {
+        fsearch_window_listview_set_empty(win);
         sort_overlay_remove_timeout(win);
         win->sort_overlay_timeout_id = g_timeout_add(30, on_sort_overlay_show, data);
     }
     return G_SOURCE_REMOVE;
-}
-
-static void
-fsearch_window_db_view_sort_started(FsearchDatabaseView *view, gpointer user_data) {
-    if (!user_data) {
-        return;
-    }
-    g_idle_add(fsearch_window_db_view_sort_started_cb, user_data);
 }
 
 static gboolean
@@ -391,14 +385,6 @@ fsearch_window_db_view_search_finished_cb(gpointer data) {
     return G_SOURCE_REMOVE;
 }
 
-static void
-fsearch_window_db_view_search_finished(FsearchDatabaseView *view, gpointer user_data) {
-    if (!user_data) {
-        return;
-    }
-    g_idle_add(fsearch_window_db_view_search_finished_cb, user_data);
-}
-
 static gboolean
 fsearch_window_db_view_search_started_cb(gpointer data) {
     const guint win_id = GPOINTER_TO_UINT(data);
@@ -408,14 +394,6 @@ fsearch_window_db_view_search_started_cb(gpointer data) {
         fsearch_statusbar_set_query_status_delayed(FSEARCH_STATUSBAR(win->statusbar));
     }
     return G_SOURCE_REMOVE;
-}
-
-static void
-fsearch_window_db_view_search_started(FsearchDatabaseView *view, gpointer user_data) {
-    if (!user_data) {
-        return;
-    }
-    g_idle_add(fsearch_window_db_view_search_started_cb, user_data);
 }
 
 static void
@@ -484,8 +462,7 @@ on_fsearch_list_view_popup(FsearchListView *view, int row_idx, gpointer user_dat
 
     const gboolean res = listview_popup_menu(user_data, name->str, type);
 
-    g_string_free(name, TRUE);
-    name = NULL;
+    g_string_free(g_steal_pointer(&name), TRUE);
 
     return res;
 }
@@ -613,12 +590,10 @@ on_fsearch_list_view_row_activated(FsearchListView *view,
 
 out:
     if (path) {
-        g_string_free(path, TRUE);
-        path = NULL;
+        g_string_free(g_steal_pointer(&path), TRUE);
     }
     if (path_full) {
-        g_string_free(path_full, TRUE);
-        path_full = NULL;
+        g_string_free(g_steal_pointer(&path_full), TRUE);
     }
 }
 
@@ -831,8 +806,7 @@ fsearch_application_window_init_overlays(FsearchApplicationWindow *win) {
 
     gtk_widget_show_all(win->main_stack);
 
-    g_object_unref(builder);
-    builder = NULL;
+    g_clear_object(&builder);
 }
 
 static void
@@ -894,7 +868,7 @@ on_database_update_finished(gpointer data, gpointer user_data) {
     db_view_unregister(win->result_view->database_view);
     db_view_register(db, win->result_view->database_view);
 
-    db_unref(db);
+    g_clear_pointer(&db, db_unref);
 }
 
 static void
@@ -976,7 +950,7 @@ static gboolean
 on_fsearch_window_delete_event(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
     FsearchApplicationWindow *win = FSEARCH_APPLICATION_WINDOW(widget);
     fsearch_application_window_prepare_shutdown(win);
-    gtk_widget_destroy(widget);
+    g_clear_pointer(&widget, gtk_widget_destroy);
     return TRUE;
 }
 
@@ -1016,7 +990,7 @@ fsearch_window_db_view_selection_changed_cb(gpointer data) {
 }
 
 static gboolean
-fsearch_window_db_view_changed_cb(gpointer data) {
+fsearch_window_db_view_content_changed_cb(gpointer data) {
     const guint win_id = GPOINTER_TO_UINT(data);
     FsearchApplicationWindow *win = get_window_for_id(win_id);
 
@@ -1050,19 +1024,33 @@ fsearch_window_db_view_changed_cb(gpointer data) {
 }
 
 static void
-fsearch_window_db_view_changed(FsearchDatabaseView *view, gpointer user_data) {
+fsearch_window_db_view_notify(FsearchDatabaseView *view, FsearchDatabaseViewNotify id, gpointer user_data) {
     if (!user_data) {
         return;
     }
-    g_idle_add(fsearch_window_db_view_changed_cb, user_data);
-}
-
-static void
-fsearch_window_db_view_selection_changed(FsearchDatabaseView *view, gpointer user_data) {
-    if (!user_data) {
-        return;
+    switch (id) {
+    case DATABASE_VIEW_NOTIFY_CONTENT_CHANGED:
+        g_idle_add(fsearch_window_db_view_content_changed_cb, user_data);
+        break;
+    case DATABASE_VIEW_NOTIFY_SELECTION_CHANGED:
+        g_idle_add(fsearch_window_db_view_selection_changed_cb, user_data);
+        break;
+    case DATABASE_VIEW_NOTIFY_SEARCH_STARTED:
+        g_idle_add(fsearch_window_db_view_search_started_cb, user_data);
+        break;
+    case DATABASE_VIEW_NOTIFY_SEARCH_FINISHED:
+        g_idle_add(fsearch_window_db_view_search_finished_cb, user_data);
+        break;
+    case DATABASE_VIEW_NOTIFY_SORT_STARTED:
+        g_idle_add(fsearch_window_db_view_sort_started_cb, user_data);
+        break;
+    case DATABASE_VIEW_NOTIFY_SORT_FINISHED:
+        g_idle_add(fsearch_window_db_view_sort_finished_cb, user_data);
+        break;
+    default:
+        g_debug("[view_notify] unknown id: %d", id);
+        break;
     }
-    g_idle_add(fsearch_window_db_view_selection_changed_cb, user_data);
 }
 
 static void
@@ -1215,27 +1203,19 @@ fsearch_application_window_added(FsearchApplicationWindow *win, FsearchApplicati
                                                   get_query_flags(),
                                                   get_active_filter(win),
                                                   win->result_view->sort_order,
-                                                  fsearch_window_db_view_changed,
-                                                  fsearch_window_db_view_selection_changed,
-                                                  fsearch_window_db_view_search_started,
-                                                  fsearch_window_db_view_search_finished,
-                                                  fsearch_window_db_view_sort_started,
-                                                  fsearch_window_db_view_sort_finished,
+                                                  fsearch_window_db_view_notify,
                                                   GUINT_TO_POINTER(win_id));
     FsearchDatabase *db = fsearch_application_get_db(FSEARCH_APPLICATION_DEFAULT);
     if (db) {
         db_view_register(db, win->result_view->database_view);
-        db_unref(db);
+        g_clear_pointer(&db, db_unref);
     }
 }
 
 void
 fsearch_application_window_removed(FsearchApplicationWindow *win, FsearchApplication *app) {
     g_assert(FSEARCH_IS_APPLICATION_WINDOW(win));
-    if (win->result_view->database_view) {
-        db_view_unref(win->result_view->database_view);
-        win->result_view->database_view = NULL;
-    }
+    g_clear_pointer(&win->result_view->database_view, db_view_unref);
 }
 
 void

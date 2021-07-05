@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <dirent.h>
+#include <fcntl.h>
 #include <fnmatch.h>
 #include <glib/gi18n.h>
 #include <malloc.h>
@@ -39,9 +40,7 @@
 #include "fsearch_exclude_path.h"
 #include "fsearch_index.h"
 #include "fsearch_memory_pool.h"
-#include "fsearch_query.h"
 #include "fsearch_task.h"
-#include "fsearch_thread_pool.h"
 
 #define NUM_DB_ENTRIES_FOR_POOL_BLOCK 10000
 
@@ -106,19 +105,8 @@ db_unregister_view(FsearchDatabase *db, gpointer view) {
 static void
 db_sorted_entries_free(FsearchDatabase *db) {
     for (uint32_t i = 0; i < NUM_DATABASE_INDEX_TYPES; i++) {
-        DynamicArray *files = db->sorted_files[i];
-        if (files) {
-            darray_unref(files);
-            files = NULL;
-        }
-        db->sorted_files[i] = NULL;
-
-        DynamicArray *folders = db->sorted_folders[i];
-        if (folders) {
-            darray_unref(folders);
-            folders = NULL;
-        }
-        db->sorted_folders[i] = NULL;
+        g_clear_pointer(&db->sorted_files[i], darray_unref);
+        g_clear_pointer(&db->sorted_folders[i], darray_unref);
     }
 }
 
@@ -178,8 +166,7 @@ db_sort(FsearchDatabase *db) {
         g_debug("[db_sort] sorted folders: %f s", seconds);
     }
 
-    g_timer_destroy(timer);
-    timer = NULL;
+    g_clear_pointer(&timer, g_timer_destroy);
 }
 
 static void
@@ -205,8 +192,12 @@ db_entry_update_folder_indices(FsearchDatabase *db) {
 
 static uint8_t
 get_name_offset(const char *old, const char *new) {
+    if (!old || !new) {
+        return 0;
+    }
+
     uint8_t offset = 0;
-    while (old[offset] == new[offset] && old[offset] != '\0' && new[offset] != '\0') {
+    while (old[offset] == new[offset] && old[offset] != '\0' && new[offset] != '\0' && offset < 255) {
         offset++;
     }
     return offset;
@@ -224,8 +215,7 @@ db_file_open_locked(const char *file_path, const char *mode) {
     if (flock(file_descriptor, LOCK_EX | LOCK_NB) == -1) {
         g_debug("[db_file] database file is already locked by a different process: %s", file_path);
 
-        fclose(file_pointer);
-        file_pointer = NULL;
+        g_clear_pointer(&file_pointer, fclose);
     }
 
     return file_pointer;
@@ -428,11 +418,9 @@ db_load_folders(FILE *fp,
     }
 
 out:
-    free(folder_block);
-    folder_block = NULL;
+    g_clear_pointer(&folder_block, free);
 
-    g_string_free(previous_entry_name, TRUE);
-    previous_entry_name = NULL;
+    g_string_free(g_steal_pointer(&previous_entry_name), TRUE);
 
     return res;
 }
@@ -489,11 +477,9 @@ db_load_files(FILE *fp,
     }
 
 out:
-    free(file_block);
-    file_block = NULL;
+    g_clear_pointer(&file_block, free);
 
-    g_string_free(previous_entry_name, TRUE);
-    previous_entry_name = NULL;
+    g_string_free(g_steal_pointer(&previous_entry_name), TRUE);
 
     return result;
 }
@@ -520,8 +506,7 @@ db_load_sorted_entries(FILE *fp, DynamicArray *src, uint32_t num_src_entries, Dy
         }
     }
 
-    free(indexes);
-    indexes = NULL;
+    g_clear_pointer(&indexes, free);
 
     return res;
 }
@@ -673,29 +658,18 @@ db_load(FsearchDatabase *db, const char *file_path, void (*status_cb)(const char
     db->num_folders = num_folders;
     db->index_flags = index_flags;
 
-    fclose(fp);
-    fp = NULL;
+    g_clear_pointer(&fp, fclose);
 
     return true;
 
 load_fail:
     g_debug("[db_load] load failed");
 
-    if (fp) {
-        fclose(fp);
-        fp = NULL;
-    }
+    g_clear_pointer(&fp, fclose);
 
     for (uint32_t i = 0; i < NUM_DATABASE_INDEX_TYPES; i++) {
-        if (sorted_folders[i]) {
-            darray_unref(sorted_folders[i]);
-        }
-        sorted_folders[i] = NULL;
-
-        if (sorted_files[i]) {
-            darray_unref(sorted_files[i]);
-        }
-        sorted_files[i] = NULL;
+        g_clear_pointer(&sorted_folders[i], darray_unref);
+        g_clear_pointer(&sorted_files[i], darray_unref);
     }
 
     return false;
@@ -843,11 +817,8 @@ db_save_files(FILE *fp,
     }
 
 out:
-    g_string_free(name_prev, TRUE);
-    name_prev = NULL;
-
-    g_string_free(name_new, TRUE);
-    name_new = NULL;
+    g_string_free(g_steal_pointer(&name_prev), TRUE);
+    g_string_free(g_steal_pointer(&name_new), TRUE);
 
     return bytes_written;
 }
@@ -890,10 +861,8 @@ db_save_sorted_entries(FILE *fp, DynamicArray *entries, uint32_t num_entries, bo
     }
 
 out:
-    if (sorted_entry_index_list) {
-        free(sorted_entry_index_list);
-        sorted_entry_index_list = NULL;
-    }
+    g_clear_pointer(&sorted_entry_index_list, free);
+
     return bytes_written;
 }
 
@@ -979,11 +948,8 @@ db_save_folders(FILE *fp,
     }
 
 out:
-    g_string_free(name_prev, TRUE);
-    name_prev = NULL;
-
-    g_string_free(name_new, TRUE);
-    name_new = NULL;
+    g_string_free(g_steal_pointer(&name_prev), TRUE);
+    g_string_free(g_steal_pointer(&name_new), TRUE);
 
     return bytes_written;
 }
@@ -1158,8 +1124,7 @@ db_save(FsearchDatabase *db, const char *path) {
     // remove current database file
     unlink(path_full->str);
 
-    fclose(fp);
-    fp = NULL;
+    g_clear_pointer(&fp, fclose);
 
     g_debug("[db_save] renaming temporary database file: %s -> %s", path_full_temp->str, path_full->str);
     // rename temporary fsearch.db.tmp to fsearch.db
@@ -1167,16 +1132,14 @@ db_save(FsearchDatabase *db, const char *path) {
         goto save_fail;
     }
 
-    g_string_free(path_full, TRUE);
-    path_full = NULL;
+    g_string_free(g_steal_pointer(&path_full), TRUE);
 
-    g_string_free(path_full_temp, TRUE);
-    path_full_temp = NULL;
+    g_string_free(g_steal_pointer(&path_full_temp), TRUE);
 
     const double seconds = g_timer_elapsed(timer, NULL);
     g_timer_stop(timer);
-    g_timer_destroy(timer);
-    timer = NULL;
+
+    g_clear_pointer(&timer, g_timer_destroy);
 
     g_debug("[db_save] database file saved in: %f ms", seconds * 1000);
 
@@ -1185,22 +1148,15 @@ db_save(FsearchDatabase *db, const char *path) {
 save_fail:
     g_warning("[db_save] saving failed");
 
-    if (fp) {
-        fclose(fp);
-        fp = NULL;
-    }
+    g_clear_pointer(&fp, fclose);
 
     // remove temporary fsearch.db.tmp file
     unlink(path_full_temp->str);
 
-    g_string_free(path_full, TRUE);
-    path_full = NULL;
+    g_string_free(g_steal_pointer(&path_full), TRUE);
+    g_string_free(g_steal_pointer(&path_full_temp), TRUE);
 
-    g_string_free(path_full_temp, TRUE);
-    path_full_temp = NULL;
-
-    g_timer_destroy(timer);
-    timer = NULL;
+    g_clear_pointer(&timer, g_timer_destroy);
 
     return false;
 }
@@ -1259,7 +1215,8 @@ db_folder_scan_recursive(DatabaseWalkContext *walk_context, FsearchDatabaseEntry
         g_debug("[db_scan] failed to open directory: %s", path->str);
         return WALK_BADIO;
     }
-    // g_debug("[db_scan] scanning directory: %s", path->str);
+
+    const int dir_fd = dirfd(dir);
 
     const double elapsed_seconds = g_timer_elapsed(walk_context->timer, NULL);
     if (elapsed_seconds > 0.1) {
@@ -1275,7 +1232,7 @@ db_folder_scan_recursive(DatabaseWalkContext *walk_context, FsearchDatabaseEntry
     while ((dent = readdir(dir))) {
         if (walk_context->cancellable && g_cancellable_is_cancelled(walk_context->cancellable)) {
             g_debug("[db_scan] cancelled");
-            closedir(dir);
+            g_clear_pointer(&dir, closedir);
             return WALK_CANCEL;
         }
         if (walk_context->exclude_hidden && dent->d_name[0] == '.') {
@@ -1291,12 +1248,18 @@ db_folder_scan_recursive(DatabaseWalkContext *walk_context, FsearchDatabaseEntry
             continue;
         }
 
+        const size_t d_name_len = strlen(dent->d_name);
+        if (d_name_len >= 256) {
+            g_warning("[db_scan] file name too long, skipping: \"%s\" (len: %lu)", dent->d_name, d_name_len);
+            continue;
+        }
+
         // create full path of file/folder
         g_string_truncate(path, path_len);
         g_string_append(path, dent->d_name);
 
         struct stat st;
-        if (lstat(path->str, &st) == -1) {
+        if (fstatat(dir_fd, dent->d_name, &st, AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT)) {
             g_debug("[db_scan] can't stat: %s", path->str);
             continue;
         }
@@ -1338,11 +1301,11 @@ db_folder_scan_recursive(DatabaseWalkContext *walk_context, FsearchDatabaseEntry
         db->num_entries++;
     }
 
-    closedir(dir);
+    g_clear_pointer(&dir, closedir);
     return WALK_OK;
 }
 
-static void
+static bool
 db_scan_folder(FsearchDatabase *db, const char *dname, GCancellable *cancellable, void (*status_cb)(const char *)) {
     assert(dname != NULL);
     assert(dname[0] == G_DIR_SEPARATOR);
@@ -1350,7 +1313,7 @@ db_scan_folder(FsearchDatabase *db, const char *dname, GCancellable *cancellable
 
     if (!g_file_test(dname, G_FILE_TEST_IS_DIR)) {
         g_warning("[db_scan] %s doesn't exist", dname);
-        return;
+        return false;
     }
 
     GString *path = g_string_new(dname);
@@ -1382,18 +1345,17 @@ db_scan_folder(FsearchDatabase *db, const char *dname, GCancellable *cancellable
 
     uint32_t res = db_folder_scan_recursive(&walk_context, parent);
 
-    g_string_free(path, TRUE);
-    path = NULL;
+    g_string_free(g_steal_pointer(&path), TRUE);
 
-    g_timer_destroy(timer);
-    timer = NULL;
+    g_clear_pointer(&timer, g_timer_destroy);
 
     if (res == WALK_OK) {
         g_debug("[db_scan] scanned: %d files, %d folders -> %d total", db->num_files, db->num_folders, db->num_entries);
-        return;
+        return true;
     }
 
     g_warning("[db_scan] walk error: %d", res);
+    return false;
 }
 
 static gint
@@ -1453,42 +1415,28 @@ db_free(FsearchDatabase *db) {
 
     db_sorted_entries_free(db);
 
-    if (db->file_pool) {
-        fsearch_memory_pool_free(db->file_pool);
-        db->file_pool = NULL;
-    }
-
-    if (db->folder_pool) {
-        fsearch_memory_pool_free(db->folder_pool);
-        db->folder_pool = NULL;
-    }
+    g_clear_pointer(&db->file_pool, fsearch_memory_pool_free_pool);
+    g_clear_pointer(&db->folder_pool, fsearch_memory_pool_free_pool);
 
     if (db->indexes) {
-        g_list_free_full(db->indexes, (GDestroyNotify)fsearch_index_free);
-        db->indexes = NULL;
+        g_list_free_full(g_steal_pointer(&db->indexes), (GDestroyNotify)fsearch_index_free);
     }
     if (db->excludes) {
-        g_list_free_full(db->excludes, (GDestroyNotify)fsearch_exclude_path_free);
-        db->excludes = NULL;
+        g_list_free_full(g_steal_pointer(&db->excludes), (GDestroyNotify)fsearch_exclude_path_free);
     }
-    if (db->exclude_files) {
-        g_strfreev(db->exclude_files);
-        db->exclude_files = NULL;
-    }
-    if (db->thread_pool) {
-        fsearch_thread_pool_free(db->thread_pool);
-        db->thread_pool = NULL;
-    }
+
+    g_clear_pointer(&db->exclude_files, g_strfreev);
+    g_clear_pointer(&db->thread_pool, fsearch_thread_pool_free);
+
     db_unlock(db);
 
     g_mutex_clear(&db->mutex);
-    g_free(db);
-    db = NULL;
+
+    g_clear_pointer(&db, free);
 
     malloc_trim(0);
 
     g_debug("[db_free] freed");
-    return;
 }
 
 time_t
@@ -1581,6 +1529,35 @@ db_get_files_copy(FsearchDatabase *db) {
     return db_get_files_sorted_copy(db, DATABASE_INDEX_TYPE_NAME);
 }
 
+bool
+db_get_entries_sorted(FsearchDatabase *db,
+                      FsearchDatabaseIndexType requested_sort_type,
+                      FsearchDatabaseIndexType *returned_sort_type,
+                      DynamicArray **folders,
+                      DynamicArray **files) {
+    assert(db != NULL);
+    assert(returned_sort_type != NULL);
+    assert(folders != NULL);
+    assert(files != NULL);
+    if (!is_valid_sort_type(requested_sort_type)) {
+        return false;
+    }
+
+    FsearchDatabaseIndexType sort_type = requested_sort_type;
+    if (!db_has_entries_sorted_by_type(db, requested_sort_type)) {
+        sort_type = DATABASE_INDEX_TYPE_NAME;
+    }
+
+    if (!db_has_entries_sorted_by_type(db, sort_type)) {
+        return false;
+    }
+
+    *folders = darray_ref(db->sorted_folders[sort_type]);
+    *files = darray_ref(db->sorted_files[sort_type]);
+    *returned_sort_type = sort_type;
+    return true;
+}
+
 DynamicArray *
 db_get_folders_sorted(FsearchDatabase *db, FsearchDatabaseIndexType sort_type) {
     assert(db != NULL);
@@ -1645,8 +1622,11 @@ db_scan(FsearchDatabase *db, GCancellable *cancellable, void (*status_cb)(const 
             continue;
         }
         if (fs_path->update) {
-            db_scan_folder(db, fs_path->path, cancellable, status_cb);
+            ret = db_scan_folder(db, fs_path->path, cancellable, status_cb) || ret;
         }
+    }
+    if (status_cb) {
+        status_cb(_("Sorting…"));
     }
     db_sort(db);
     return ret;
@@ -1669,7 +1649,6 @@ db_unref(FsearchDatabase *db) {
     }
     g_debug("[db_unref] dropped to: %d", db->ref_count - 1);
     if (g_atomic_int_dec_and_test(&db->ref_count)) {
-        db_free(db);
-        db = NULL;
+        g_clear_pointer(&db, db_free);
     }
 }

@@ -1,6 +1,6 @@
 project('fsearch', 'c',
     version: '0.1beta4',
-    meson_version: '>= 0.50.0',
+    meson_version: '>= 0.45.0',
     default_options: ['c_std=c11'],
     )
 app_id = 'io.github.cboxdoerfer.FSearch'
@@ -21,11 +21,12 @@ config_h.set_quoted('PACKAGE_ICON_NAME', app_id)
 config_h.set_quoted('PACKAGE_NAME', 'FSearch')
 
 add_project_arguments('-DHAVE_CONFIG_H', language : 'c')
+# ensure off_t is 64bit
 add_project_arguments('-D_FILE_OFFSET_BITS=64', language : 'c')
 
-if get_option('buildtype').startswith('debug')
-    add_project_arguments('-DDEBUG', language : 'c')
-endif
+fsearch_include_dirs = include_directories(
+  '.',
+)
 
 subdir('data')
 subdir('src')

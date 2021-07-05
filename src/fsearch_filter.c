@@ -8,12 +8,7 @@
 #include <string.h>
 
 FsearchFilter *
-fsearch_filter_new(FsearchFilterFileType type,
-                   const char *name,
-                   const char *query,
-                   bool match_case,
-                   bool enable_regex,
-                   bool search_in_path) {
+fsearch_filter_new(FsearchFilterFileType type, const char *name, const char *query, FsearchQueryFlags flags) {
     FsearchFilter *filter = calloc(1, sizeof(FsearchFilter));
     assert(filter != NULL);
 
@@ -24,25 +19,16 @@ fsearch_filter_new(FsearchFilterFileType type,
     if (query) {
         filter->query = strdup(query);
     }
-    filter->match_case = match_case;
-    filter->enable_regex = enable_regex;
-    filter->search_in_path = search_in_path;
+    filter->flags = flags;
     filter->ref_count = 1;
     return filter;
 }
 
 static void
 fsearch_filter_free(FsearchFilter *filter) {
-    if (filter->name) {
-        free(filter->name);
-        filter->name = NULL;
-    }
-    if (filter->query) {
-        free(filter->query);
-        filter->query = NULL;
-    }
-    free(filter);
-    filter = NULL;
+    g_clear_pointer(&filter->name, free);
+    g_clear_pointer(&filter->query, free);
+    g_clear_pointer(&filter, free);
 }
 
 FsearchFilter *
@@ -60,8 +46,7 @@ fsearch_filter_unref(FsearchFilter *filter) {
         return;
     }
     if (g_atomic_int_dec_and_test(&filter->ref_count)) {
-        fsearch_filter_free(filter);
-        filter = NULL;
+        g_clear_pointer(&filter, fsearch_filter_free);
     }
 }
 
@@ -95,21 +80,30 @@ static const char *archive_filter =
 GList *
 fsearch_filter_get_default() {
     GList *filters = NULL;
-    filters = g_list_append(filters, fsearch_filter_new(FSEARCH_FILTER_NONE, _("All"), NULL, false, false, false));
-    filters =
-        g_list_append(filters, fsearch_filter_new(FSEARCH_FILTER_FOLDERS, _("Folders"), NULL, false, false, false));
-    filters = g_list_append(filters, fsearch_filter_new(FSEARCH_FILTER_FILES, _("Files"), NULL, false, false, false));
+    filters = g_list_append(filters, fsearch_filter_new(FSEARCH_FILTER_NONE, _("All"), NULL, 0));
+    filters = g_list_append(filters, fsearch_filter_new(FSEARCH_FILTER_FOLDERS, _("Folders"), NULL, 0));
+    filters = g_list_append(filters, fsearch_filter_new(FSEARCH_FILTER_FILES, _("Files"), NULL, 0));
     filters = g_list_append(filters,
-                            fsearch_filter_new(FSEARCH_FILTER_FILES, _("Archives"), archive_filter, true, true, false));
-    filters =
-        g_list_append(filters, fsearch_filter_new(FSEARCH_FILTER_FILES, _("Audio"), audio_filter, true, true, false));
-    filters =
-        g_list_append(filters,
-                      fsearch_filter_new(FSEARCH_FILTER_FILES, _("Documents"), document_filter, true, true, false));
+                            fsearch_filter_new(FSEARCH_FILTER_FILES,
+                                               _("Archives"),
+                                               archive_filter,
+                                               QUERY_FLAG_MATCH_CASE | QUERY_FLAG_REGEX));
+    filters = g_list_append(
+        filters,
+        fsearch_filter_new(FSEARCH_FILTER_FILES, _("Audio"), audio_filter, QUERY_FLAG_MATCH_CASE | QUERY_FLAG_REGEX));
     filters = g_list_append(filters,
-                            fsearch_filter_new(FSEARCH_FILTER_FILES, _("Pictures"), image_filter, true, true, false));
-    filters =
-        g_list_append(filters, fsearch_filter_new(FSEARCH_FILTER_FILES, _("Videos"), video_filter, true, true, false));
+                            fsearch_filter_new(FSEARCH_FILTER_FILES,
+                                               _("Documents"),
+                                               document_filter,
+                                               QUERY_FLAG_MATCH_CASE | QUERY_FLAG_REGEX));
+    filters = g_list_append(filters,
+                            fsearch_filter_new(FSEARCH_FILTER_FILES,
+                                               _("Pictures"),
+                                               image_filter,
+                                               QUERY_FLAG_MATCH_CASE | QUERY_FLAG_REGEX));
+    filters = g_list_append(
+        filters,
+        fsearch_filter_new(FSEARCH_FILTER_FILES, _("Videos"), video_filter, QUERY_FLAG_MATCH_CASE | QUERY_FLAG_REGEX));
 
     return filters;
 }
